@@ -34,7 +34,6 @@ function displayMenu(menu) {
         itemElement.innerHTML = `
             <img src="${item.image_url}" alt="${item.name}" class="menu-item-image">
             <h3>${item.name}</h3>
-            <p>价格: ¥${formattedPrice}</p>
             <button onclick="addToCart(${item.id}, '${item.name}', ${price}, this)" class="${buttonClass}">${buttonText}</button>
         `;
         menuItems.appendChild(itemElement);
@@ -551,7 +550,7 @@ function spinWheel() {
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
     let currentRotation = 0;
-    const totalRotation = Math.random() * 360 + 720; // At least 2 full rotations
+    const totalRotation = Math.random() * 360 + 1440; // At least 4 full rotations
     const duration = 5000; // 5 seconds
     const start = performance.now();
 
@@ -596,7 +595,7 @@ function showConfirmDialog(dish) {
     const dialog = document.createElement('div');
     dialog.className = 'confirm-dialog';
     dialog.innerHTML = `
-        <p>选中的菜品: ${dish.name}</p>
+        <p>已选中: ${dish.name},</p>
         <p>是否加入购物车？</p>
         <button id="confirm-yes">是</button>
         <button id="confirm-no">否</button>

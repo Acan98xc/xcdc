@@ -511,6 +511,15 @@ button:active {
         padding: 0.4rem 0.6rem;
         font-size: 0.7rem;
     }
+    #wheel-container {
+        width: 300px;
+        height: 300px;
+    }
+
+    #wheel {
+        width: 300px;
+        height: 300px;
+    }
 }
 
 #wheel-section {
@@ -532,17 +541,6 @@ button:active {
     text-align: center;
 }
 
-@media screen and (max-width: 480px) {
-    #wheel-container {
-        width: 300px;
-        height: 300px;
-    }
-
-    #wheel {
-        width: 300px;
-        height: 300px;
-    }
-}
 
 #wheel {
     border: 10px solid #333;
