@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线点餐系统 - 菜单</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header>
+        <h1>🐻🐻🐻🐻</h1>
+        <button id="menu-toggle" class="mobile-only">☰</button>
+        <nav id="main-nav">
+            <ul>
+                <li><a href="index.html">菜单</a></li>
+                <li><a href="cart.html">购物车</a></li>
+                <li><a href="orders.html">全部订单</a></li>
+                <li><a href="wheel.html">转盘</a></li>
+
+            </ul>
+        </nav>
+    </header>
+    <div class="content-wrapper">
+        <main>
+            <section id="menu">
+                <h2>菜单</h2>
+                <div id="menu-items"></div>
+            </section>
+            <div id="pagination"></div>
+            <!-- 在 <main> 标签内添加以下内容 -->
+            <section id="wheel-section">
+                <h2>幸运转盘</h2>
+                <div id="wheel-container">
+                    <canvas id="wheel" width="400" height="400"></canvas>
+                    <button id="spin-button">转动</button>
+                </div>
+                <p id="selected-dish"></p>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
