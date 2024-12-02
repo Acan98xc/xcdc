@@ -7,6 +7,8 @@ const itemsPerPage = 8;
 async function getMenu(page = 1) {
     try {
         const response = await fetch(`/api/menu?page=${page}&limit=${itemsPerPage}`);
+        // console.log(response);
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -112,7 +114,7 @@ async function addToCart(itemId, name, price, button) {
         // 使用最新的价格信息
         price = parseFloat(freshItem.price);
 
-        if (isNaN(price) || price <= 0) {
+        if (isNaN(price) || price < 0) {
             console.error(`Invalid price for item ${name}: ${price}`);
             showModal(`无法添加商品 ${name}：价格无效`, 'error');
             return;
@@ -230,7 +232,7 @@ async function submitOrder() {
         const validCart = cart.filter(item => {
             const price = parseFloat(item.price);
             const quantity = parseInt(item.quantity);
-            if (isNaN(price) || isNaN(quantity) || price <= 0 || quantity <= 0) {
+            if (isNaN(price) || isNaN(quantity) || price < 0 || quantity <= 0) {
                 console.error(`Invalid item in cart: ${JSON.stringify(item)}`);
                 return false;
             }

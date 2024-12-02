@@ -1,6 +1,22 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const path = require('path');
+const multer = require('multer');
+const WebSocket = require('ws');
+const http = require('http');
+
+// 配置 multer 存储
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, path.join(__dirname, 'public/images'))
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname)
+    }
+});
+
+const upload = multer({ storage: storage });
+
 const app = express();
 
 // 数据库连接
@@ -67,7 +83,68 @@ app.get('/api/init-menu', async (req, res) => {
     }
 });
 
-// 提交订单
+// 创建 HTTP 服务器
+const server = http.createServer(app);
+
+// 创建 WebSocket 服务器
+const wss = new WebSocket.Server({ server });
+
+// 存储所有连接的管理端 WebSocket 客户端
+const adminClients = new Set();
+
+// WebSocket 连接处理
+wss.on('connection', (ws) => {
+    console.log('新的WebSocket连接已建立');
+
+    // 将新连接的客户端添加到集合中
+    adminClients.add(ws);
+    console.log(`当前活动连接数: ${adminClients.size}`);
+
+    // 发送测试消息
+    ws.send(JSON.stringify({
+        type: 'connection_established',
+        message: '连接成功'
+    }));
+
+    // 连接关闭时移除客户端
+    ws.on('close', () => {
+        console.log('WebSocket连接已关闭');
+        adminClients.delete(ws);
+        console.log(`当前活动连接数: ${adminClients.size}`);
+    });
+
+    // 错误处理
+    ws.on('error', (error) => {
+        console.error('WebSocket错误:', error);
+    });
+});
+
+// 广播新订单通知给所有管理端
+function broadcastNewOrder(orderId) {
+    const message = JSON.stringify({
+        type: 'new_order',
+        orderId: orderId,
+        timestamp: new Date().toISOString()
+    });
+
+    console.log(`准备广播新订单通知, 当前连接数: ${adminClients.size}`);
+    console.log('广播消息:', message);
+
+    adminClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            try {
+                client.send(message);
+                console.log('成功发送通知到客户端');
+            } catch (error) {
+                console.error('发送通知失败:', error);
+            }
+        } else {
+            console.log('客户端连接未就绪，状态:', client.readyState);
+        }
+    });
+}
+
+// 修改提交订单的接口，添加通知功能
 app.post('/api/orders', async (req, res) => {
     try {
         const cart = req.body;
@@ -85,7 +162,7 @@ app.post('/api/orders', async (req, res) => {
 
             console.log(`Item: ${item.name}, Price: ${price}, Quantity: ${quantity}`);
 
-            if (isNaN(price) || isNaN(quantity) || price <= 0 || quantity <= 0) {
+            if (isNaN(price) || isNaN(quantity) || price < 0 || quantity <= 0) {
                 throw new Error(`无效的价格或数量: 价格 = ${item.price}, 数量 = ${item.quantity}, 商品名称 = ${item.name}`);
             }
 
@@ -110,6 +187,9 @@ app.post('/api/orders', async (req, res) => {
             await pool.query('INSERT INTO order_items (order_id, menu_item_id, quantity) VALUES (?, ?, ?)',
                 [orderId, menuItemId, quantity]);
         }
+
+        // 订单创建成功后，发送通知
+        broadcastNewOrder(orderId);
 
         res.json({ message: '订单提交成功', orderId });
     } catch (error) {
@@ -192,5 +272,203 @@ app.get('/api/refresh-menu-item/:id', async (req, res) => {
     }
 });
 
+// 修改获取所有菜品（管理员接口）
+app.get('/api/admin/dishes', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, name, CAST(price AS DECIMAL(10,2)) AS price, image_url FROM menu_items ORDER BY id DESC');
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改获取单个菜品详情
+app.get('/api/admin/dishes/:id', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, name, CAST(price AS DECIMAL(10,2)) AS price, image_url FROM menu_items WHERE id = ?', [req.params.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: '菜品不存在' });
+        }
+        res.json(rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改添加新菜品
+app.post('/api/admin/dishes', upload.single('image'), async (req, res) => {
+    try {
+        const { name, price } = req.body;
+        const image_url = req.file ? `/images/${req.file.filename}` : null;
+
+        const [result] = await pool.query(
+            'INSERT INTO menu_items (name, price, image_url) VALUES (?, ?, ?)',
+            [name, price, image_url]
+        );
+
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改更新菜品
+app.put('/api/admin/dishes/:id', upload.single('image'), async (req, res) => {
+    try {
+        const { name, price } = req.body;
+        const image_url = req.file ? `/images/${req.file.filename}` : undefined;
+
+        let sql = 'UPDATE menu_items SET name = ?, price = ?';
+        let params = [name, price];
+
+        if (image_url) {
+            sql += ', image_url = ?';
+            params.push(image_url);
+        }
+
+        sql += ' WHERE id = ?';
+        params.push(req.params.id);
+
+        await pool.query(sql, params);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改删除菜品
+app.delete('/api/admin/dishes/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM menu_items WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改获取订单列表的接口，添加状态筛选
+app.get('/api/admin/orders', async (req, res) => {
+    try {
+        const { status, startDate, endDate } = req.query;
+        let sql = `
+            SELECT o.id, o.order_date, o.status, o.total_amount,
+                   GROUP_CONCAT(
+                       CONCAT(mi.name, ' x', oi.quantity)
+                       SEPARATOR ', '
+                   ) as items
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+        `;
+
+        const params = [];
+        const conditions = [];
+
+        // 状态筛选
+        if (status && status !== 'all') {
+            conditions.push('o.status = ?');
+            params.push(status);
+        }
+
+        // 日期范围筛选
+        if (startDate) {
+            conditions.push('DATE(o.order_date) >= ?');
+            params.push(startDate);
+        }
+        if (endDate) {
+            conditions.push('DATE(o.order_date) <= ?');
+            params.push(endDate);
+        }
+
+        // 添加 WHERE 子句
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        // 分组和排序
+        sql += ` 
+            GROUP BY o.id, o.order_date, o.status, o.total_amount 
+            ORDER BY o.order_date DESC
+        `;
+
+        console.log('SQL Query:', sql); // 调试日志
+        console.log('Parameters:', params); // 调试日志
+
+        const [rows] = await pool.query(sql, params);
+
+        // 格式化返回的数据
+        const formattedRows = rows.map(row => ({
+            ...row,
+            order_date: row.order_date,
+            total_amount: parseFloat(row.total_amount).toFixed(2),
+            status: row.status || 'pending',
+            items: row.items || '暂无商品'
+        }));
+
+        res.json(formattedRows);
+    } catch (error) {
+        console.error('获取订单列表失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 添加更新订单状态的接口
+app.put('/api/admin/orders/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // 验证状态值
+        const validStatuses = ['pending', 'processing', 'completed'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: '无效的订单状态' });
+        }
+
+        // 更新订单状态
+        await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+
+        // 如果状态更新为已完成，记录完成时间
+        if (status === 'completed') {
+            await pool.query('UPDATE orders SET completed_at = NOW() WHERE id = ?', [id]);
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('更新订单状态失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改订单详情接口，添加状态信息
+app.get('/api/admin/orders/:id', async (req, res) => {
+    try {
+        const [orders] = await pool.query(`
+            SELECT o.id, o.order_date, o.status, o.total_amount,
+                   JSON_ARRAYAGG(
+                       JSON_OBJECT(
+                           'id', oi.id,
+                           'name', mi.name,
+                           'quantity', oi.quantity,
+                           'price', mi.price
+                       )
+                   ) as items
+            FROM orders o
+            JOIN order_items oi ON o.id = oi.order_id
+            JOIN menu_items mi ON oi.menu_item_id = mi.id
+            WHERE o.id = ?
+            GROUP BY o.id
+        `, [req.params.id]);
+
+        if (orders.length === 0) {
+            return res.status(404).json({ error: '订单不存在' });
+        }
+
+        res.json(orders[0]);
+    } catch (error) {
+        console.error('获取订单详情失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`服务器运行在端口 ${PORT}`));
+server.listen(PORT, () => console.log(`服务器运行在端口 ${PORT}`));
