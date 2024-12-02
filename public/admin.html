@@ -7,6 +7,7 @@
     <title>后台管理系统</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -54,11 +55,11 @@
                     <div class="filter-group">
                         <label for="date-range">日期范围</label>
                         <select id="date-range">
+                            <option value="all" selected>全部时间</option>
                             <option value="today">今天</option>
-                            <option value="yesterday">昨天</option>
-                            <option value="week">本周</option>
-                            <option value="month">本月</option>
-                            <option value="custom">自定义</option>
+                            <option value="week">最近7天</option>
+                            <option value="month">最近30天</option>
+                            <option value="custom">自定义时间</option>
                         </select>
                     </div>
                     <div class="filter-group custom-date-range" style="display: none;">
@@ -79,21 +80,24 @@
             <div class="section-header">
                 <h2>统计分析</h2>
                 <div class="stats-filters">
-                    <select id="stats-period">
+                    <select id="stats-period" onchange="loadStats()">
+                        <option value="all">全部数据</option>
+                        <option value="month">近30天</option>
+                        <option value="week">近7天</option>
                         <option value="today">今日</option>
-                        <option value="week">本周</option>
-                        <option value="month">本月</option>
                     </select>
                 </div>
             </div>
             <div class="stats-grid">
                 <div class="stats-card">
-                    <h3>营业额</h3>
+                    <h3>订单统计</h3>
                     <div id="revenue-stats"></div>
                 </div>
                 <div class="stats-card">
-                    <h3>热销菜品</h3>
-                    <div id="popular-dishes"></div>
+                    <h3>热销排行</h3>
+                    <div class="chart-container">
+                        <canvas id="popular-dishes-chart"></canvas>
+                    </div>
                 </div>
             </div>
         </section>

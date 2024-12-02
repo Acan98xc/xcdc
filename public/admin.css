@@ -56,6 +56,7 @@
     padding: 0 15px 15px;
     display: flex;
     gap: 10px;
+    justify-content: space-between
 }
 
 .btn {
@@ -253,6 +254,60 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.stats-card h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.stats-item:last-child {
+    border-bottom: none;
+}
+
+.stats-label {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.stats-value {
+    font-weight: 500;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.stats-filters {
+    display: flex;
+    gap: 10px;
+}
+
+.stats-filters select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .order-filters,
 .stats-filters {
     display: flex;
@@ -425,7 +480,7 @@
     color: #155724;
 }
 
-/* 状态选择器样式 */
+/* 态选择器样式 */
 .status-select {
     padding: 4px 8px;
     border: 1px solid #ddd;
@@ -519,4 +574,60 @@
 /* 声音关闭状态 */
 .sound-muted .sound-icon {
     opacity: 0.5;
+}
+
+/* 添加无数据时的样式 */
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.no-data-message p {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+/* 修改图表容器样式 */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 统计卡片样式优化 */
+.stats-card {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.stats-card h3 {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* 修改订单卡片中的菜品列表样式 */
+.order-items {
+    font-size: 1.1em;
+    /* 增大字体 */
+    margin: 10px 0;
+    color: #333;
+    line-height: 1.4;
+    /* 增加行高以提高可读性 */
+    font-weight: 500;
+    /* 添加适中的粗细 */
+}
+
+/* 订单详情中的菜品表格字体 */
+.order-items-table td {
+    font-size: 1.1em;
+    padding: 10px 8px;
+    /* 增加一些内边距 */
+    font-weight: 500;
+    /* 添加适中的粗细 */
 }

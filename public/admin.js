@@ -38,6 +38,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化 WebSocket 连接
     initWebSocket();
+
+    // 添加统计时间范围切换事件
+    const statsPeriod = document.getElementById('stats-period');
+    if (statsPeriod) {
+        statsPeriod.addEventListener('change', () => {
+            loadStats();
+        });
+    }
+
+    // 初始加载统计数据
+    loadStats();
 });
 
 // 显示指定部分
@@ -189,7 +200,7 @@ document.getElementById('dish-image').addEventListener('change', function (e) {
 // 修改筛选相关变量
 let currentFilters = {
     status: 'all',
-    dateRange: 'today',
+    dateRange: 'all',
     startDate: null,
     endDate: null
 };
@@ -210,34 +221,33 @@ function initFilters() {
         }
     });
 
-    // 初始化日期范围
-    setDateRange('today');
+    // 初始化日期范围为全部时间
+    setDateRange('all');
 }
 
-// 设置日期范围
+// 修改设置日期范围函数，添加 'all' 的处理
 function setDateRange(range) {
     const today = new Date();
     let startDate = new Date();
     let endDate = new Date();
 
     switch (range) {
+        case 'all':
+            // 不设置具体日期范围
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            return;
         case 'today':
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(23, 59, 59, 999);
             break;
-        case 'yesterday':
-            startDate.setDate(today.getDate() - 1);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(startDate);
-            endDate.setHours(23, 59, 59, 999);
-            break;
         case 'week':
-            startDate.setDate(today.getDate() - today.getDay());
+            startDate.setDate(today.getDate() - 7);
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(23, 59, 59, 999);
             break;
         case 'month':
-            startDate.setDate(1);
+            startDate.setDate(today.getDate() - 30);
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(23, 59, 59, 999);
             break;
@@ -274,13 +284,13 @@ async function applyFilters() {
 // 修改重置筛选函数
 function resetFilters() {
     document.getElementById('order-status-filter').value = 'all';
-    document.getElementById('date-range').value = 'today';
-    setDateRange('today');
+    document.getElementById('date-range').value = 'all';
+    setDateRange('all');
     document.querySelector('.custom-date-range').style.display = 'none';
 
     currentFilters = {
         status: 'all',
-        dateRange: 'today',
+        dateRange: 'all',
         startDate: null,
         endDate: null
     };
@@ -405,31 +415,129 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 加载统计数据
+// 声明图表变量
+let popularDishesChart = null;
+
+// 更新热销菜品图表
+function updatePopularDishesChart(popularDishes) {
+    const ctx = document.getElementById('popular-dishes-chart');
+
+    // 如果图表已存在，销毁它
+    if (popularDishesChart) {
+        popularDishesChart.destroy();
+    }
+
+    // 准备数据
+    const labels = popularDishes.map(dish => dish.name);
+    const quantities = popularDishes.map(dish => dish.totalQuantity);
+
+    // 创建新图表
+    popularDishesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '数量',
+                data: quantities,
+                backgroundColor: generateColors(labels.length),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',  // 使用水平柱状图
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: '数量（份）'
+                    },
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: '热销排行',
+                    font: { size: 16 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return `销量: ${context.raw} 份`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// 修改加载统计数据的函数
 async function loadStats() {
     try {
         const period = document.getElementById('stats-period').value;
         const response = await fetch(`/api/admin/stats?period=${period}`);
         const stats = await response.json();
 
-        // 更新营业额统计
+        // 更新订单统计
         document.getElementById('revenue-stats').innerHTML = `
-            <h4>总营业额: ¥${stats.totalRevenue}</h4>
-            <h4>订单数: ${stats.orderCount}</h4>
-            <h4>平均订单金额: ¥${stats.averageOrderAmount}</h4>
+            <div class="stats-item">
+                <span class="stats-label">订单总数</span>
+                <span class="stats-value">${stats.orderCount}</span>
+            </div>
+            <div class="stats-item">
+                <span class="stats-label">天数</span>
+                <span class="stats-value">${stats.activeDays}天</span>
+            </div>
+            ${stats.firstOrderDate ? `
+            <div class="stats-item">
+                <span class="stats-label">统计时间</span>
+                <span class="stats-value">${new Date(stats.firstOrderDate).toLocaleDateString()} ~ ${new Date(stats.lastOrderDate).toLocaleDateString()}</span>
+            </div>
+            ` : ''}
         `;
 
-        // 更新热销菜品
-        document.getElementById('popular-dishes').innerHTML = stats.popularDishes
-            .map(dish => `
-                <div class="popular-dish-item">
-                    <span>${dish.name}</span>
-                    <span>销量: ${dish.count}</span>
+        // 更新热销菜品图表
+        if (stats.popularDishes && stats.popularDishes.length > 0) {
+            updatePopularDishesChart(stats.popularDishes);
+            document.querySelector('.stats-grid').style.display = 'grid';
+        } else {
+            document.querySelector('.stats-grid').innerHTML = `
+                <div class="stats-card">
+                    <div class="no-data-message">
+                        <p>所选时间范围内暂无销售数据</p>
+                    </div>
                 </div>
-            `).join('');
+            `;
+        }
+
     } catch (error) {
         console.error('加载统计数据失败:', error);
+        showNotification('加载统计数据失败', 'error');
     }
+}
+
+// 生成随机颜色
+function generateColors(count) {
+    const colors = [];
+    const baseHues = [0, 60, 120, 180, 240, 300]; // 基础色相值
+
+    for (let i = 0; i < count; i++) {
+        const hue = baseHues[i % baseHues.length];
+        const saturation = 70 + Math.random() * 10; // 70-80%
+        const lightness = 50 + Math.random() * 10; // 50-60%
+        colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+    }
+
+    return colors;
 }
 
 // 辅助数
@@ -673,7 +781,7 @@ function initAudioContext() {
 
         audioInitialized = true;
     } catch (error) {
-        console.error('Web Audio API 不支持:', error);
+        console.error('Web Audio API 不支:', error);
         audioInitialized = false;
     }
 }
@@ -731,35 +839,37 @@ function playTestSound() {
 
 // 修改播放通知声音函数
 function playNotificationSound() {
-    // 如果声音被禁用，直接返回
-    if (!soundEnabled) {
-        return;
-    }
-
-    // 确保音频上下文已初始化且处于可用状态
-    if (!audioContext || audioContext.state === 'suspended') {
-        console.warn('音频上下文未初始化或已挂起，尝试使用备用声音');
-        playFallbackSound();
-        return;
-    }
-
+    // 尝试使用 Web Audio API 播放声音
     try {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        fetch('/notification.mp3')
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContext.destination);
+                source.start(0);
+            })
+            .catch(error => {
+                console.error('Web Audio API 播放失败，尝试使用后备方案:', error);
+                playFallbackSound();
+            });
     } catch (error) {
-        console.error('播放提示音失败:', error);
+        console.error('创建 Audio Context 失败，尝试使用后备方案:', error);
         playFallbackSound();
+    }
+}
+
+function playFallbackSound() {
+    // 使用 HTML5 Audio 作为后备方案
+    try {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(error => {
+            console.error('HTML5 Audio 播放失败:', error);
+        });
+    } catch (error) {
+        console.error('播放通知音效完全失败:', error);
     }
 }
 

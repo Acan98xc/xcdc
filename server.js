@@ -362,7 +362,7 @@ app.get('/api/admin/orders', async (req, res) => {
         `;
 
         const params = [];
-        const conditions = [];
+        const conditions = ['o.is_deleted = FALSE'];
 
         // 状态筛选
         if (status && status !== 'all') {
@@ -412,7 +412,7 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-// 添加更新订单状态的接口
+// 更新订单状态的路由
 app.put('/api/admin/orders/:id/status', async (req, res) => {
     try {
         const { id } = req.params;
@@ -424,12 +424,18 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
             return res.status(400).json({ error: '无效的订单状态' });
         }
 
-        // 更新订单状态
-        await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
-
-        // 如果状态更新为已完成，记录完成时间
         if (status === 'completed') {
-            await pool.query('UPDATE orders SET completed_at = NOW() WHERE id = ?', [id]);
+            // 如果状态是已完成，同时更新状态和完成时间
+            await pool.query(
+                'UPDATE orders SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+                [status, id]
+            );
+        } else {
+            // 其他状态只更新状态
+            await pool.query(
+                'UPDATE orders SET status = ?, completed_at = NULL WHERE id = ?',
+                [status, id]
+            );
         }
 
         res.json({ success: true });
@@ -466,6 +472,134 @@ app.get('/api/admin/orders/:id', async (req, res) => {
         res.json(orders[0]);
     } catch (error) {
         console.error('获取订单详情失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改统计数据接口
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const { period } = req.query;
+        let startDate = new Date();
+        let endDate = new Date();
+
+        // 设置时间范围
+        switch (period) {
+            case 'today':
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+                break;
+            case 'week':
+                startDate.setDate(startDate.getDate() - 7);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+                break;
+            case 'month':
+                startDate.setMonth(startDate.getMonth() - 1);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+                break;
+            case 'all':
+            default:
+                // 获取最早的订单日期
+                const [earliest] = await pool.query(`
+                    SELECT MIN(order_date) as earliest_date 
+                    FROM orders
+                `);
+                if (earliest[0].earliest_date) {
+                    startDate = new Date(earliest[0].earliest_date);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                }
+                break;
+        }
+
+        console.log('查询时间范围:', {
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            period
+        });
+
+        // 获取订单统计数据
+        const [orderStats] = await pool.query(`
+            SELECT 
+                COUNT(*) as orderCount,
+                COALESCE(SUM(total_amount), 0) as totalRevenue,
+                COUNT(DISTINCT DATE(order_date)) as activeDays,
+                MIN(order_date) as firstOrderDate,
+                MAX(order_date) as lastOrderDate
+            FROM orders
+            WHERE order_date BETWEEN ? AND ?
+        `, [startDate, endDate]);
+
+        // 修改热销菜品查询
+        const [popularDishes] = await pool.query(`
+            SELECT 
+                mi.id,
+                mi.name,
+                COUNT(DISTINCT o.id) as orderCount,
+                SUM(oi.quantity) as totalQuantity,
+                COALESCE(SUM(oi.quantity * mi.price), 0) as totalRevenue
+            FROM menu_items mi
+            LEFT JOIN order_items oi ON mi.id = oi.menu_item_id
+            LEFT JOIN orders o ON oi.order_id = o.id 
+            WHERE o.order_date BETWEEN ? AND ?
+            GROUP BY mi.id, mi.name
+            HAVING totalQuantity > 0
+            ORDER BY totalQuantity DESC
+            LIMIT 10
+        `, [startDate, endDate]);
+
+        // 计算每日平均营业额
+        const activeDays = Math.max(1, orderStats[0].activeDays);
+        const averageDailyRevenue = Number(orderStats[0].totalRevenue) / activeDays;
+
+        // 计算平均订单金额
+        const orderCount = Math.max(1, Number(orderStats[0].orderCount));
+        const averageOrderAmount = Number(orderStats[0].totalRevenue) / orderCount;
+
+        // 格式化数据
+        const stats = {
+            orderCount: Number(orderStats[0].orderCount),
+            totalRevenue: Number(orderStats[0].totalRevenue),
+            averageOrderAmount: parseFloat(averageOrderAmount.toFixed(2)),
+            averageDailyRevenue: parseFloat(averageDailyRevenue.toFixed(2)),
+            activeDays: orderStats[0].activeDays,
+            firstOrderDate: orderStats[0].firstOrderDate,
+            lastOrderDate: orderStats[0].lastOrderDate,
+            period: period,
+            dateRange: {
+                start: startDate,
+                end: endDate
+            },
+            popularDishes: popularDishes.map(dish => ({
+                id: dish.id,
+                name: dish.name,
+                orderCount: Number(dish.orderCount) || 0,
+                totalQuantity: Number(dish.totalQuantity) || 0,
+                totalRevenue: parseFloat((Number(dish.totalRevenue) || 0).toFixed(2))
+            }))
+        };
+
+        // 添加调试日志
+        console.log('统计数据:', JSON.stringify(stats, null, 2));
+
+        res.json(stats);
+    } catch (error) {
+        console.error('获取统计数据失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 修改删除订单的接口为软删除
+app.delete('/api/admin/orders/:id', async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE orders SET is_deleted = TRUE WHERE id = ?',
+            [req.params.id]
+        );
+        res.json({ success: true });
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
