@@ -49,6 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始加载统计数据
     loadStats();
+
+    // 添加移动端支持
+    if ('ontouchstart' in window) {
+        initTouchSupport();
+    }
 });
 
 // 显示指定部分
@@ -874,4 +879,58 @@ function playFallbackSound() {
 }
 
 // 声音设置
-let soundEnabled = true; 
+let soundEnabled = true;
+
+// 添加移动端手势支持
+function initTouchSupport() {
+    // 为图表添加触摸滑动支持
+    const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer) {
+        let startX;
+        let scrollLeft;
+
+        chartContainer.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].pageX - chartContainer.offsetLeft;
+            scrollLeft = chartContainer.scrollLeft;
+        });
+
+        chartContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const x = e.touches[0].pageX - chartContainer.offsetLeft;
+            const walk = (x - startX) * 2;
+            chartContainer.scrollLeft = scrollLeft - walk;
+        });
+    }
+
+    // 添加下拉刷新功能
+    let touchStartY = 0;
+    document.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].pageY;
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        const touchY = e.touches[0].pageY;
+        const scroll = window.scrollY;
+
+        if (scroll === 0 && touchY > touchStartY) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+        const touchY = e.changedTouches[0].pageY;
+        if (window.scrollY === 0 && touchY > touchStartY + 100) {
+            // 刷新当前页面数据
+            const currentSection = document.querySelector('.admin-section[style*="display: block"]');
+            if (currentSection) {
+                if (currentSection.id === 'dishes-section') {
+                    loadDishes();
+                } else if (currentSection.id === 'orders-section') {
+                    loadOrders();
+                } else if (currentSection.id === 'stats-section') {
+                    loadStats();
+                }
+            }
+        }
+    });
+} 

@@ -326,7 +326,7 @@
 .nav-link {
     color: #333;
     text-decoration: none;
-    padding: 8px 16px;
+    padding: 8px 8px;
     border-radius: 4px;
 }
 
@@ -567,6 +567,7 @@
 }
 
 .sound-icon {
+    display: none;
     font-size: 20px;
     line-height: 1;
 }
@@ -630,4 +631,276 @@
     /* 增加一些内边距 */
     font-weight: 500;
     /* 添加适中的粗细 */
+}
+
+/* 移动端适配基础设置 */
+@media screen and (max-width: 768px) {
+
+    /* 头部布局优化 */
+    header {
+        padding: 10px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+
+    header h1 {
+        font-size: 1.2em;
+        margin: 0;
+        text-align: center;
+    }
+
+    /* 导航栏布局优化 */
+    header nav {
+        width: 100%;
+        margin-top: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    header nav ul {
+        display: flex;
+        flex-direction: row;
+        /* 改为水平排列 */
+        justify-content: space-around;
+        padding: 5px;
+        margin: 0;
+        list-style: none;
+    }
+
+    header nav ul li {
+        flex: 1;
+        margin: 0 2px;
+    }
+
+    header nav ul li a {
+        display: block;
+        text-align: center;
+        padding: 8px 4px;
+        color: #666;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 0.9em;
+        white-space: nowrap;
+    }
+
+    header nav ul li a.active {
+        background: #4CAF50;
+        color: white;
+    }
+
+    /* 为固定头部腾出空间 */
+    .admin-container {
+        padding-top: 120px;
+        /* 根据实际头部高度调整 */
+    }
+
+    /* 头部操作区域调整 */
+    .header-actions {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+    }
+
+    /* 内容区域调整 */
+    .admin-container {
+        padding: 10px;
+    }
+
+    /* 菜品管理优化 */
+    .section-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .section-header button {
+        width: 100%;
+    }
+
+    .dish-grid {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+
+    /* 订单管理优化 */
+    .order-filters {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+    }
+
+    .custom-date-range {
+        flex-direction: column;
+    }
+
+    /* 订单卡片优化 */
+    .order-card {
+        padding: 15px;
+    }
+
+    .order-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .order-status-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* 统计分析优化 */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-card {
+        margin: 10px 0;
+    }
+
+    .chart-container {
+        height: 250px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 模态框优化 */
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+        padding: 15px;
+    }
+
+    /* 表单优化 */
+    .form-group input,
+    .form-group select {
+        font-size: 16px;
+        /* 防止 iOS 自动缩放 */
+        padding: 10px;
+    }
+
+    /* 按钮优化 */
+    .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-actions button {
+        width: 100%;
+        padding: 12px;
+    }
+
+    /* 订单详情表格优化 */
+    .order-items-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .order-items-table th,
+    .order-items-table td {
+        white-space: nowrap;
+        padding: 10px;
+    }
+
+    /* 通知优化 */
+    .notification {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+        bottom: 20px;
+        top: auto;
+    }
+}
+
+/* 针对中等尺寸屏幕的优化 */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+    .dish-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 触摸设备的交互优化 */
+@media (hover: none) and (pointer: coarse) {
+
+    button,
+    select,
+    input[type="date"] {
+        min-height: 44px;
+    }
+
+    .btn:active {
+        transform: scale(0.98);
+    }
+
+    /* 优化下拉菜单的触摸体验 */
+    select {
+        padding-right: 30px;
+    }
+}
+
+/* 添加暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+    .admin-container {
+        background-color: #1a1a1a;
+        color: #fff;
+    }
+
+    .dish-card,
+    .order-card,
+    .stats-card {
+        background-color: #2d2d2d;
+        border-color: #404040;
+    }
+
+    input,
+    select,
+    button {
+        background-color: #333;
+        color: #fff;
+        border-color: #404040;
+    }
+
+    .modal-content {
+        background-color: #2d2d2d;
+        color: #fff;
+    }
+}
+
+/* 暗色模式下的导航栏样式 */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+    header {
+        background: #1a1a1a;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    header nav {
+        background: #2d2d2d;
+    }
+
+    header nav ul li a {
+        color: #ccc;
+    }
+
+    header nav ul li a.active {
+        background: #4CAF50;
+        color: white;
+    }
 }
