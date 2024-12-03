@@ -148,7 +148,7 @@ function broadcastNewOrder(orderId) {
 app.post('/api/orders', async (req, res) => {
     try {
         const cart = req.body;
-        console.log('Received cart:', JSON.stringify(cart, null, 2));
+        // console.log('Received cart:', JSON.stringify(cart, null, 2));
 
         // 验证购物车数据
         if (!Array.isArray(cart) || cart.length === 0) {
@@ -169,7 +169,7 @@ app.post('/api/orders', async (req, res) => {
             return total + price * quantity;
         }, 0);
 
-        console.log('Total amount:', totalAmount);
+        // console.log('Total amount:', totalAmount);
 
         // 插入订单
         const [orderResult] = await pool.query('INSERT INTO orders (total_amount) VALUES (?)', [totalAmount]);
@@ -264,7 +264,7 @@ app.get('/api/refresh-menu-item/:id', async (req, res) => {
             return res.status(404).json({ error: '菜品未找到' });
         }
 
-        console.log(`Refreshed menu item: ${JSON.stringify(rows[0])}`);
+        // console.log(`Refreshed menu item: ${JSON.stringify(rows[0])}`);
         res.json(rows[0]);
     } catch (error) {
         console.error('获取菜品信息失败:', error);

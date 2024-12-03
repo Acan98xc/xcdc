@@ -13,7 +13,7 @@ async function getMenu(page = 1) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Retrieved menu:', data);
+        // console.log('Retrieved menu:', data);
         displayMenu(data.items);
         displayPagination(data.currentPage, data.totalPages);
     } catch (error) {
@@ -99,7 +99,7 @@ function changePage(page) {
 // 添加到购物车或从购物车中移除
 async function addToCart(itemId, name, price, button) {
     try {
-        console.log(`Attempting to add item: ID=${itemId}, Name=${name}, Price=${price}`);
+        // console.log(`Attempting to add item: ID=${itemId}, Name=${name}, Price=${price}`);
         // 从服务器获取最新的菜品信息
         const response = await fetch(`/api/refresh-menu-item/${itemId}`);
         if (!response.ok) {
@@ -109,7 +109,7 @@ async function addToCart(itemId, name, price, button) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const freshItem = await response.json();
-        console.log('Fresh item data:', freshItem);
+        // console.log('Fresh item data:', freshItem);
 
         // 使用最新的价格信息
         price = parseFloat(freshItem.price);
@@ -144,7 +144,7 @@ async function addToCart(itemId, name, price, button) {
         localStorage.setItem('cart', JSON.stringify(cart));
         localStorage.setItem('addedItems', JSON.stringify(addedItems));
 
-        console.log(`添加到购物车: ${freshItem.name}, 价格: ${price}`);
+        // console.log(`添加到购物车: ${freshItem.name}, 价格: ${price}`);
 
         // 如果在购物车页面，更新显示（可选）
         if (window.location.pathname.includes('cart.html')) {
@@ -226,7 +226,7 @@ async function submitOrder() {
     submitButton.textContent = '提交中...';
 
     try {
-        console.log('Original cart:', JSON.stringify(cart, null, 2));
+        // console.log('Original cart:', JSON.stringify(cart, null, 2));
 
         // 确保购物车中的数据都是有效的
         const validCart = cart.filter(item => {
@@ -248,7 +248,7 @@ async function submitOrder() {
             throw new Error('购物车中没有有效的商品');
         }
 
-        console.log('Sending to server:', JSON.stringify(validCart, null, 2));
+        // console.log('Sending to server:', JSON.stringify(validCart, null, 2));
 
         const response = await fetch('/api/orders', {
             method: 'POST',
@@ -493,7 +493,7 @@ async function initWheel() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         wheelItems = await response.json();
-        console.log(wheelItems);
+        // console.log(wheelItems);
         drawWheel();
     } catch (error) {
         console.error('获取菜品失败:', error);

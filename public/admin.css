@@ -857,50 +857,50 @@
 }
 
 /* 添加暗色模式支持 */
-@media (prefers-color-scheme: dark) {
-    .admin-container {
-        background-color: #1a1a1a;
-        color: #fff;
-    }
+/*@media (prefers-color-scheme: dark) {*/
+/*    .admin-container {*/
+/*        background-color: #1a1a1a;*/
+/*        color: #fff;*/
+/*    }*/
 
-    .dish-card,
-    .order-card,
-    .stats-card {
-        background-color: #2d2d2d;
-        border-color: #404040;
-    }
+/*    .dish-card,*/
+/*    .order-card,*/
+/*    .stats-card {*/
+/*        background-color: #2d2d2d;*/
+/*        border-color: #404040;*/
+/*    }*/
 
-    input,
-    select,
-    button {
-        background-color: #333;
-        color: #fff;
-        border-color: #404040;
-    }
+/*    input,*/
+/*    select,*/
+/*    button {*/
+/*        background-color: #333;*/
+/*        color: #fff;*/
+/*        border-color: #404040;*/
+/*    }*/
 
-    .modal-content {
-        background-color: #2d2d2d;
-        color: #fff;
-    }
-}
+/*    .modal-content {*/
+/*        background-color: #2d2d2d;*/
+/*        color: #fff;*/
+/*    }*/
+/*}*/
 
 /* 暗色模式下的导航栏样式 */
-@media (prefers-color-scheme: dark) and (max-width: 768px) {
-    header {
-        background: #1a1a1a;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
+/*@media (prefers-color-scheme: dark) and (max-width: 768px) {*/
+/*    header {*/
+/*        background: #1a1a1a;*/
+/*        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);*/
+/*    }*/
 
-    header nav {
-        background: #2d2d2d;
-    }
+/*    header nav {*/
+/*        background: #2d2d2d;*/
+/*    }*/
 
-    header nav ul li a {
-        color: #ccc;
-    }
+/*    header nav ul li a {*/
+/*        color: #ccc;*/
+/*    }*/
 
-    header nav ul li a.active {
-        background: #4CAF50;
-        color: white;
-    }
-}
+/*    header nav ul li a.active {*/
+/*        background: #4CAF50;*/
+/*        color: white;*/
+/*    }*/
+/*}*/
