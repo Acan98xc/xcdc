@@ -440,7 +440,8 @@ button:active {
     }
 
     main {
-        padding: 1rem;
+        /*padding: 1rem;*/
+        padding-left: 0%;
     }
 
     .menu-item {
@@ -461,9 +462,6 @@ button:active {
         display: block;
     }
 
-    #main-nav {
-        display: none;
-    }
 
     #menu-items {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

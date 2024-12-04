@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    initAudioContext();
+    initFilters();
+    // initWebSocket();
+
     // 默认显示菜品管理部分
     showSection('dishes');
 
@@ -15,14 +19,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const modal = document.getElementById('dish-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideDishForm();
+            }
+        });
+    }
+    // 添加订单模态框的点击关闭功能
+    const orderModal = document.getElementById('order-modal');
+    if (orderModal) {
+        orderModal.addEventListener('click', (e) => {
+            if (e.target === orderModal) {
+                hideOrderModal();
+            }
+        });
+    }
+
     // 加载初始数据
     loadDishes();
-
-    // 初始化筛选器
-    initFilters();
-
-    // 初始化音频上下文
-    initAudioContext();
+    loadOrders(); // 加载订单
 
     // 初始化声音设置
     const savedSoundSetting = localStorage.getItem('soundEnabled');
@@ -152,28 +169,28 @@ function showNotification(message, type = 'success') {
 }
 
 // 添加备用通知声音函数
-function fallbackNotificationSound() {
-    // 使用简单的 Web Audio API 生成提示音
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音符
-
-        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (err) {
-        console.log('备用提示音也无法播放:', err);
-    }
-}
+// function fallbackNotificationSound() {
+//     // 使用简单的 Web Audio API 生成提示音
+//     try {
+//         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+//         const oscillator = audioContext.createOscillator();
+//         const gainNode = audioContext.createGain();
+//
+//         oscillator.connect(gainNode);
+//         gainNode.connect(audioContext.destination);
+//
+//         oscillator.type = 'sine';
+//         oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音符
+//
+//         gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+//         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+//
+//         oscillator.start(audioContext.currentTime);
+//         oscillator.stop(audioContext.currentTime + 0.5);
+//     } catch (err) {
+//         console.log('备用提示音也无法播放:', err);
+//     }
+// }
 
 // 导航功能
 document.querySelectorAll('.nav-link').forEach(link => {
@@ -209,12 +226,10 @@ let currentFilters = {
     startDate: null,
     endDate: null
 };
-
 // 初始化筛选器
 function initFilters() {
     const dateRangeSelect = document.getElementById('date-range');
     const customDateRange = document.querySelector('.custom-date-range');
-
     // 日期范围选择事件
     dateRangeSelect.addEventListener('change', function () {
         if (this.value === 'custom') {
@@ -316,6 +331,14 @@ async function loadOrders() {
         const orders = await response.json();
 
         renderOrderList(orders);
+
+        // 检查是否有未完成的新订单
+        const newOrders = orders.filter(order => order.status !== 'completed');
+        if (newOrders.length > 0) {
+            showNotification(`您有 ${newOrders.length} 个未完成的订单！`);
+            playNotificationSound(); // 播放声音通知
+        }
+
     } catch (error) {
         console.error('加载订单失败:', error);
     }
@@ -407,18 +430,7 @@ async function showOrderDetails(orderId) {
     }
 }
 
-// 初始化订单筛选器事件监听
-document.addEventListener('DOMContentLoaded', () => {
-    const statusFilter = document.getElementById('order-status-filter');
-    const dateFilter = document.getElementById('order-date-filter');
 
-    if (statusFilter) {
-        statusFilter.addEventListener('change', loadOrders);
-    }
-    if (dateFilter) {
-        dateFilter.addEventListener('change', loadOrders);
-    }
-});
 
 // 声明图表变量
 let popularDishesChart = null;
@@ -555,12 +567,7 @@ function getStatusText(status) {
     return statusMap[status] || status;
 }
 
-// 初始化
-document.addEventListener('DOMContentLoaded', () => {
-    loadDishes();
-    loadOrders();
-    loadStats();
-});
+
 
 // 加载菜品列表
 async function loadDishes() {
@@ -711,26 +718,7 @@ async function handleDishSubmit(event) {
 }
 
 // 添加点击模态框部关闭功能
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('dish-modal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                hideDishForm();
-            }
-        });
-    }
 
-    // 添加订单模态框的点击关闭功能
-    const orderModal = document.getElementById('order-modal');
-    if (orderModal) {
-        orderModal.addEventListener('click', (e) => {
-            if (e.target === orderModal) {
-                hideOrderModal();
-            }
-        });
-    }
-});
 
 // 修改订单列表渲染，添加状态样式
 function renderOrderList(orders) {
