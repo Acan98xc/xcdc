@@ -3,7 +3,8 @@ const mysql = require('mysql2/promise');
 const path = require('path');
 const multer = require('multer');
 const WebSocket = require('ws');
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
 
 // 配置 multer 存储
 const storage = multer.diskStorage({
@@ -83,8 +84,14 @@ app.get('/api/init-menu', async (req, res) => {
     }
 });
 
-// 创建 HTTP 服务器
-const server = http.createServer(app);
+// 读取自签名证书和私钥
+const privateKey = fs.readFileSync('server.key', 'utf8');
+const certificate = fs.readFileSync('server.cert', 'utf8');
+
+const credentials = { key: privateKey, cert: certificate };
+
+// 创建 HTTPS 服务器
+const server = https.createServer(credentials, app);
 
 // 创建 WebSocket 服务器
 const wss = new WebSocket.Server({ server });
