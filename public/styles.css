@@ -237,12 +237,15 @@ button:active {
 }
 
 #order-history .order h3 {
+    display:none;
+    margin-bottom: 0.2rem;
     margin-top: 0;
     color: var(--primary-color);
 }
 
 #order-history .order ul {
     padding-left: 5rem;
+    margin-top: 0;
 }
 
 .modal {

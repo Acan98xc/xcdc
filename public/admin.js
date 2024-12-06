@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statsPeriod = document.getElementById('stats-period');
     if (statsPeriod) {
         loadStats();
-        statsPeriod.addEventListener('change', () => {
+        statsPeriod.addEventListener('onchange', () => {
             loadStats();
         });
     }
@@ -503,7 +503,7 @@ async function loadStats() {
         const period = document.getElementById('stats-period').value;
         const response = await fetch(`/api/admin/stats?period=${period}`);
         const stats = await response.json();
-        console.log(stats);
+        //console.log(stats);
 
         // 检查元素是否存在
         const revenueStats = document.getElementById('revenue-stats');
