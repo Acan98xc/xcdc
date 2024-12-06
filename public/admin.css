@@ -188,6 +188,11 @@
     padding: 8px;
     border: 1px solid #ddd;
     text-align: left;
+    font-size: 1.1em;
+    padding: 10px 8px;
+    /* 增加一些内边距 */
+    font-weight: 500;
+    /* 添加适中的粗细 */
 }
 
 .order-items-table thead {
@@ -268,11 +273,6 @@
     font-size: 1.1em;
 }
 
-.stats-filters {
-    display: flex;
-    gap: 10px;
-}
-
 .stats-filters select {
     padding: 8px 12px;
     border: 1px solid #ddd;
@@ -305,7 +305,6 @@
     }
 }
 
-.order-filters,
 .stats-filters {
     display: flex;
     gap: 10px;
@@ -314,11 +313,6 @@
 
 .order-filters select,
 .order-filters input,
-.stats-filters select {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
 
 .nav-link {
     color: #333;
@@ -575,15 +569,6 @@
     /* 添加适中的粗细 */
 }
 
-/* 订单详情中的菜品表格字体 */
-.order-items-table td {
-    font-size: 1.1em;
-    padding: 10px 8px;
-    /* 增加一些内边距 */
-    font-weight: 500;
-    /* 添加适中的粗细 */
-}
-
 /* 移动端适配基础设置 */
 @media screen and (max-width: 768px) {
 
@@ -798,7 +783,6 @@
 @media (hover: none) and (pointer: coarse) {
 
     button,
-    select,
     input[type="date"] {
         min-height: 44px;
     }

@@ -81,7 +81,7 @@ main {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding: 2rem;
+    padding: 0.5rem;
 }
 
 section {
@@ -102,6 +102,8 @@ h2 {
     border-bottom: 2px solid var(--secondary-color);
     padding-bottom: 0.5rem;
     margin-top: 0;
+    height: 22px;
+
 }
 
 button {
@@ -381,6 +383,14 @@ button:active {
     cursor: not-allowed;
 }
 
+#wsc-p {
+    color: #602020;
+    font-size: x-large;
+    display: inline-block;
+    margin-right: auto;
+    height: 20px
+}
+
 @media screen and (max-width: 768px) {
     header {
         flex-direction: row;
@@ -510,13 +520,22 @@ button:active {
         font-size: 0.7rem;
     }
     #wheel-container {
-        width: 300px;
-        height: 300px;
+        width: 320px;
+        height: 320px;
     }
 
     #wheel {
         width: 300px;
         height: 300px;
+    }
+
+    #wheel-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 80vh;
+        top: 0;
     }
 }
 
@@ -526,6 +545,8 @@ button:active {
     align-items: center;
     justify-content: center;
     min-height: 80vh;
+    top: 0;
+    height: 100%;
 }
 
 #wheel-container {
@@ -537,6 +558,7 @@ button:active {
     font-weight: bold;
     margin-top: 2rem;
     text-align: center;
+    /* height: fit-content; */
 }
 
 

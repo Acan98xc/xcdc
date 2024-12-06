@@ -156,6 +156,7 @@ async function addToCart(itemId, name, price, button) {
 
         // 显示成功消息
         showModal(`${freshItem.name} 已添加到购物车`, 'success');
+        wheelshowcart()
     } catch (error) {
         console.error('添加到购物车失败:', error);
         showModal(`添加商品失败: ${error.message}`, 'error');
@@ -495,6 +496,7 @@ async function initWheel() {
         wheelItems = await response.json();
         // console.log(wheelItems);
         drawWheel();
+        // wheelshowcart()
     } catch (error) {
         console.error('获取菜品失败:', error);
     }
@@ -631,3 +633,23 @@ function drawPointer(ctx, centerX, centerY) {
     ctx.lineWidth = 1;  // 减小边框宽度
     ctx.stroke();
 }
+
+function wheelshowcart() {
+    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+    if (cart) {
+        // console.log(cart);
+
+        let names = cart.map(names => {
+            return names['name']
+        })
+        names = names.join('\n')
+        console.log(names);
+
+        const wsc = document.getElementById('selected-dish')
+        wsc.innerText = `${names}`
+        // console.log(names);
+
+    }
+}
+
+wheelshowcart()
