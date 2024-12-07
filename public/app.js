@@ -439,12 +439,29 @@ function initMobileMenu() {
     }
 }
 
-// 在 init 函数中调用 initMobileMenu
+function checkAuth() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html'; // 如果没有 token，重定向到登录页面
+    }
+}
+
+// 在 init 函数中调用 checkAuth
 function init() {
+    checkAuth(); // 检查用户是否已登录
     console.log('开始初始化');
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
 
     initMobileMenu();
+    const logout_Button = document.getElementById('logout-button');
+    // console.log(logout_Button);
+
+    if (logout_Button) {
+        logout_Button.addEventListener('click', function () {
+            localStorage.removeItem('token'); // 清除 JWT
+            window.location.href = 'login.html'; // 重定向到登录页面
+        });
+    }
 
     if (currentPath === 'index.html' || currentPath === '') {
         getMenu(currentPage);
@@ -637,13 +654,11 @@ function drawPointer(ctx, centerX, centerY) {
 function wheelshowcart() {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     if (cart) {
-        // console.log(cart);
 
         let names = cart.map(names => {
             return names['name']
         })
         names = names.join('\n')
-        console.log(names);
 
         const wsc = document.getElementById('selected-dish')
         wsc.innerText = `${names}`

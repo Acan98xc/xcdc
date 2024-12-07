@@ -5,6 +5,9 @@ const multer = require('multer');
 const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { log } = require('console');
 
 
 // 配置 multer 存储
@@ -603,6 +606,50 @@ app.delete('/api/admin/orders/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// 用户注册接口
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10); // 哈希密码
+
+    try {
+        const [result] = await pool.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hashedPassword]);
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        console.error('注册失败:', error);
+        res.status(500).json({ error: '注册失败' });
+    }
+});
+
+// 用户登录接口
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    // console.log(password);
+
+    try {
+        const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+        if (rows.length === 0) {
+            return res.status(401).json({ error: '未注册用户' });
+        }
+        // console.log(rows)
+        const user = rows[0];
+        // const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        // if (!isPasswordValid) {
+        //     return res.status(401).json({ error: '用户名或密码错误' });
+        // }
+        if (username !== user['username'] || password !== user['password']) {
+            return res.status(401).json({ error: '用户名或密码错误!' });
+
+        }
+        // 生成 JWT
+        const token = jwt.sign({ id: user.id, username: user.username }, 'your_jwt_secret', { expiresIn: '1h' });
+        res.json({ token });
+    } catch (error) {
+        console.error('登录失败:', error);
+        res.status(500).json({ error: '登录失败' });
+
     }
 });
 
