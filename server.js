@@ -3,8 +3,9 @@ const mysql = require('mysql2/promise');
 const path = require('path');
 const multer = require('multer');
 const WebSocket = require('ws');
-const https = require('https');
+const http = require('http');
 const fs = require('fs');
+
 
 // 配置 multer 存储
 const storage = multer.diskStorage({
@@ -84,14 +85,8 @@ app.get('/api/init-menu', async (req, res) => {
     }
 });
 
-// 读取自签名证书和私钥
-const privateKey = fs.readFileSync('server.key', 'utf8');
-const certificate = fs.readFileSync('server.cert', 'utf8');
-
-const credentials = { key: privateKey, cert: certificate };
-
-// 创建 HTTPS 服务器
-const server = https.createServer(credentials, app);
+// 创建 HTTP 服务器
+const server = http.createServer(app);
 
 // 创建 WebSocket 服务器
 const wss = new WebSocket.Server({ server });
@@ -167,7 +162,7 @@ app.post('/api/orders', async (req, res) => {
             const price = parseFloat(item.price);
             const quantity = parseInt(item.quantity);
 
-            console.log(`Item: ${item.name}, Price: ${price}, Quantity: ${quantity}`);
+            // console.log(`Item: ${item.name}, Price: ${price}, Quantity: ${quantity}`);
 
             if (isNaN(price) || isNaN(quantity) || price < 0 || quantity <= 0) {
                 throw new Error(`无效的价格或数量: 价格 = ${item.price}, 数量 = ${item.quantity}, 商品名称 = ${item.name}`);

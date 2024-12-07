@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDishes();
     loadOrders(); // 加载订单
 
+
     // 初始化声音设置
     const savedSoundSetting = localStorage.getItem('soundEnabled');
     if (savedSoundSetting !== null) {
@@ -59,13 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 添加统计时间范围切换事件
     const statsPeriod = document.getElementById('stats-period');
     if (statsPeriod) {
+        loadStats();
         statsPeriod.addEventListener('change', () => {
             loadStats();
         });
     }
-
     // 初始加载统计数据
-    loadStats();
 
     // 添加移动端支持
     if ('ontouchstart' in window) {
@@ -245,7 +245,7 @@ function initFilters() {
     setDateRange('all');
 }
 
-// 修改设置日期范围函数，添加 'all' 的处理
+// 修改设置日期范围函数��添加 'all' 的处理
 function setDateRange(range) {
     const today = new Date();
     let startDate = new Date();
@@ -497,15 +497,23 @@ function updatePopularDishesChart(popularDishes) {
     });
 }
 
-// 修改加载统计数据的函数
+// 修改加载统计数据��函数
 async function loadStats() {
     try {
         const period = document.getElementById('stats-period').value;
         const response = await fetch(`/api/admin/stats?period=${period}`);
         const stats = await response.json();
+        console.log(stats);
+
+        // 检查元素是否存在
+        const revenueStats = document.getElementById('revenue-stats');
+        if (!revenueStats) {
+            console.error('元素 revenue-stats 不存在');
+            return; // 退出函数
+        }
 
         // 更新订单统计
-        document.getElementById('revenue-stats').innerHTML = `
+        revenueStats.innerHTML = `
             <div class="stats-item">
                 <span class="stats-label">订单总数</span>
                 <span class="stats-value">${stats.orderCount}</span>
