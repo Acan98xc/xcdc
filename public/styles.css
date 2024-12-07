@@ -519,6 +519,7 @@ button:active {
         padding: 0.4rem 0.6rem;
         font-size: 0.7rem;
     }
+
     #wheel-container {
         width: 320px;
         height: 320px;
@@ -588,4 +589,120 @@ button:active {
     margin: 10px;
     padding: 5px 10px;
     cursor: pointer;
+}
+
+/* 登录页面的美化样式 */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: fadeIn 0.5s ease-out;
+}
+
+.login-container h1 {
+    color: var(--primary-color);
+    margin-bottom: 30px;
+    font-size: 2.2em;
+    text-align: center;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 25px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #666;
+    font-size: 0.95em;
+    transition: color 0.3s ease;
+}
+
+.form-group input {
+    width: 85%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.form-group input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(169, 176, 242, 0.1);
+    outline: none;
+}
+
+.form-group input:focus+label {
+    color: var(--primary-color);
+}
+
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.login-container button:hover {
+    background: #8b93e8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(169, 176, 242, 0.3);
+}
+
+.login-container button:active {
+    transform: translateY(0);
+}
+
+/* 添加动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 响应式设计 */
+@media screen and (max-width: 480px) {
+    .login-container {
+        margin: 50px 20px;
+        padding: 30px 20px;
+    }
+
+    .login-container h1 {
+        font-size: 1.8em;
+    }
+}
+
+/* 添加背景样式 */
+body.login-page {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f3 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 20px;
 }

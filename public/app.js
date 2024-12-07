@@ -156,7 +156,7 @@ async function addToCart(itemId, name, price, button) {
 
         // 显示成功消息
         showModal(`${freshItem.name} 已添加到购物车`, 'success');
-        wheelshowcart()
+        // wheelshowcart()
     } catch (error) {
         console.error('添加到购物车失败:', error);
         showModal(`添加商品失败: ${error.message}`, 'error');
@@ -623,9 +623,10 @@ function showConfirmDialog(dish) {
     `;
     document.body.appendChild(dialog);
 
-    document.getElementById('confirm-yes').addEventListener('click', () => {
-        addToCart(dish.id, dish.name, dish.price);
+    document.getElementById('confirm-yes').addEventListener('click', async () => {
+        await addToCart(dish.id, dish.name, dish.price);
         closeDialog(dialog);
+        wheelshowcart()
     });
 
     document.getElementById('confirm-no').addEventListener('click', () => {
@@ -654,12 +655,10 @@ function drawPointer(ctx, centerX, centerY) {
 function wheelshowcart() {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     if (cart) {
-
         let names = cart.map(names => {
             return names['name']
         })
         names = names.join('\n')
-
         const wsc = document.getElementById('selected-dish')
         wsc.innerText = `${names}`
         // console.log(names);
@@ -667,4 +666,5 @@ function wheelshowcart() {
     }
 }
 
-wheelshowcart()
+// wheelshowcart()
+
