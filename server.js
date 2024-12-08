@@ -7,7 +7,6 @@ const http = require('http');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { log } = require('console');
 
 
 // 配置 multer 存储
@@ -159,13 +158,11 @@ app.post('/api/orders', async (req, res) => {
         if (!Array.isArray(cart) || cart.length === 0) {
             return res.status(400).json({ error: '无效的购物车数据' });
         }
-
+        const uname = cart[0].uname;
         // 计算总金额，并确保所有值都是有效的数字
         const totalAmount = cart.reduce((total, item) => {
             const price = parseFloat(item.price);
             const quantity = parseInt(item.quantity);
-
-            // console.log(`Item: ${item.name}, Price: ${price}, Quantity: ${quantity}`);
 
             if (isNaN(price) || isNaN(quantity) || price < 0 || quantity <= 0) {
                 throw new Error(`无效的价格或数量: 价格 = ${item.price}, 数量 = ${item.quantity}, 商品名称 = ${item.name}`);
@@ -174,10 +171,8 @@ app.post('/api/orders', async (req, res) => {
             return total + price * quantity;
         }, 0);
 
-        // console.log('Total amount:', totalAmount);
-
-        // 插入订单
-        const [orderResult] = await pool.query('INSERT INTO orders (total_amount) VALUES (?)', [totalAmount]);
+        // 插入订单，包含发起人信息
+        const [orderResult] = await pool.query('INSERT INTO orders (initiator, total_amount) VALUES (?, ?)', [uname || '未知', totalAmount]);
         const orderId = orderResult.insertId;
 
         // 插入订单项
@@ -203,6 +198,17 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
+app.get('/api/admin/getAllUsers', async (req, res
+) => {
+    try {
+        const [unames] = await pool.query('SELECT distinct username FROM users');
+        res.json(unames);
+    } catch (error) {
+        console.error('获取用户失败:', error);
+        res.status(500).json({ error: '获取用户失败' });
+    }
+})
+
 // 获取历史订单（带分页）
 app.get('/api/orders', async (req, res) => {
     try {
@@ -211,24 +217,28 @@ app.get('/api/orders', async (req, res) => {
         const offset = (page - 1) * limit;
 
         const [orders] = await pool.query(`
-            SELECT o.id, o.order_date, o.total_amount,
+            SELECT o.id,
+                   o.order_date,
+                   o.total_amount,
                    JSON_ARRAYAGG(
-                       JSON_OBJECT(
-                           'id', oi.id,
-                           'menu_item_id', oi.menu_item_id,
-                           'name', mi.name,
-                           'quantity', oi.quantity,
-                           'price', mi.price
-                       )
+                           JSON_OBJECT(
+                                   'id', oi.id,
+                                   'menu_item_id', oi.menu_item_id,
+                                   'name', mi.name,
+                                   'quantity', oi.quantity,
+                                   'price', mi.price,
+                                   'initiator', o.initiator
+                           )
                    ) AS items
             FROM orders o
-            JOIN order_items oi ON o.id = oi.order_id
-            JOIN menu_items mi ON oi.menu_item_id = mi.id
+                     JOIN order_items oi ON o.id = oi.order_id
+                     JOIN menu_items mi ON oi.menu_item_id = mi.id
             GROUP BY o.id
-            ORDER BY o.order_date DESC
-            LIMIT ? OFFSET ?
+            ORDER BY o.order_date DESC LIMIT ?
+            OFFSET ?
         `, [limit, offset]);
 
+        console.log(orders);
         const [countResult] = await pool.query('SELECT COUNT(*) as total FROM orders');
         const totalItems = countResult[0].total;
 
@@ -354,9 +364,9 @@ app.delete('/api/admin/dishes/:id', async (req, res) => {
 // 修改获取订单列表的接口，添加状态筛选
 app.get('/api/admin/orders', async (req, res) => {
     try {
-        const { status, startDate, endDate } = req.query;
+        const { status, startDate, endDate, initiator } = req.query;
         let sql = `
-            SELECT o.id, o.order_date, o.status, o.total_amount,
+            SELECT o.id, o.initiator, o.order_date, o.status, o.total_amount,
                    GROUP_CONCAT(
                        CONCAT(mi.name, ' x', oi.quantity)
                        SEPARATOR ', '
@@ -373,6 +383,12 @@ app.get('/api/admin/orders', async (req, res) => {
         if (status && status !== 'all') {
             conditions.push('o.status = ?');
             params.push(status);
+        }
+
+        // 发起人筛选
+        if (initiator && initiator !== 'all') {
+            conditions.push('o.initiator = ?');
+            params.push(initiator);
         }
 
         // 日期范围筛选
@@ -392,25 +408,34 @@ app.get('/api/admin/orders', async (req, res) => {
 
         // 分组和排序
         sql += ` 
-            GROUP BY o.id, o.order_date, o.status, o.total_amount 
+            GROUP BY o.id, o.initiator, o.order_date, o.status, o.total_amount 
             ORDER BY o.order_date DESC
         `;
 
-        console.log('SQL Query:', sql); // 调试日志
-        console.log('Parameters:', params); // 调试日志
-
         const [rows] = await pool.query(sql, params);
+
+        // 获取所有发起人列表
+        const [initiators] = await pool.query(`
+            SELECT DISTINCT initiator 
+            FROM orders 
+            WHERE initiator IS NOT NULL 
+            ORDER BY initiator
+        `);
 
         // 格式化返回的数据
         const formattedRows = rows.map(row => ({
             ...row,
+            initiator: row.initiator || '未知',
             order_date: row.order_date,
             total_amount: parseFloat(row.total_amount).toFixed(2),
             status: row.status || 'pending',
             items: row.items || '暂无商品'
         }));
 
-        res.json(formattedRows);
+        res.json({
+            orders: formattedRows,
+            initiators: initiators.map(i => i.initiator).filter(Boolean)
+        });
     } catch (error) {
         console.error('获取订单列表失败:', error);
         res.status(500).json({ error: error.message });
@@ -454,25 +479,32 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
 app.get('/api/admin/orders/:id', async (req, res) => {
     try {
         const [orders] = await pool.query(`
-            SELECT o.id, o.order_date, o.status, o.total_amount,
+            SELECT o.id,
+                   o.initiator,
+                   o.order_date,
+                   o.status,
+                   o.total_amount,
                    JSON_ARRAYAGG(
-                       JSON_OBJECT(
-                           'id', oi.id,
-                           'name', mi.name,
-                           'quantity', oi.quantity,
-                           'price', mi.price
-                       )
+                           JSON_OBJECT(
+                                   'id', oi.id,
+                                   'name', mi.name,
+                                   'quantity', oi.quantity,
+                                   'price', mi.price
+                           )
                    ) as items
             FROM orders o
-            JOIN order_items oi ON o.id = oi.order_id
-            JOIN menu_items mi ON oi.menu_item_id = mi.id
+                     JOIN order_items oi ON o.id = oi.order_id
+                     JOIN menu_items mi ON oi.menu_item_id = mi.id
             WHERE o.id = ?
-            GROUP BY o.id
+            GROUP BY o.id, o.initiator
         `, [req.params.id]);
 
         if (orders.length === 0) {
             return res.status(404).json({ error: '订单不存在' });
         }
+
+        // 确保发起人信息存在
+        orders[0].initiator = orders[0].initiator || '未知';
 
         res.json(orders[0]);
     } catch (error) {
@@ -484,7 +516,7 @@ app.get('/api/admin/orders/:id', async (req, res) => {
 // 修改统计数据接口
 app.get('/api/admin/stats', async (req, res) => {
     try {
-        const { period } = req.query;
+        const { period, initiator } = req.query;
         let startDate = new Date();
         let endDate = new Date();
 
@@ -510,7 +542,8 @@ app.get('/api/admin/stats', async (req, res) => {
                 const [earliest] = await pool.query(`
                     SELECT MIN(order_date) as earliest_date 
                     FROM orders
-                `);
+                    ${initiator && initiator !== 'all' ? 'WHERE initiator = ?' : ''}
+                `, initiator && initiator !== 'all' ? [initiator] : []);
                 if (earliest[0].earliest_date) {
                     startDate = new Date(earliest[0].earliest_date);
                     startDate.setHours(0, 0, 0, 0);
@@ -519,11 +552,16 @@ app.get('/api/admin/stats', async (req, res) => {
                 break;
         }
 
-        console.log('查询时间范围:', {
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            period
-        });
+        // 构建基础的WHERE条件
+        const whereConditions = ['order_date BETWEEN ? AND ?'];
+        const queryParams = [startDate, endDate];
+
+        if (initiator && initiator !== 'all') {
+            whereConditions.push('initiator = ?');
+            queryParams.push(initiator);
+        }
+
+        const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
 
         // 获取订单统计数据
         const [orderStats] = await pool.query(`
@@ -534,8 +572,8 @@ app.get('/api/admin/stats', async (req, res) => {
                 MIN(order_date) as firstOrderDate,
                 MAX(order_date) as lastOrderDate
             FROM orders
-            WHERE order_date BETWEEN ? AND ?
-        `, [startDate, endDate]);
+            ${whereClause}
+        `, queryParams);
 
         // 修改热销菜品查询
         const [popularDishes] = await pool.query(`
@@ -548,12 +586,20 @@ app.get('/api/admin/stats', async (req, res) => {
             FROM menu_items mi
             LEFT JOIN order_items oi ON mi.id = oi.menu_item_id
             LEFT JOIN orders o ON oi.order_id = o.id 
-            WHERE o.order_date BETWEEN ? AND ?
+            ${whereClause}
             GROUP BY mi.id, mi.name
             HAVING totalQuantity > 0
             ORDER BY totalQuantity DESC
             LIMIT 10
-        `, [startDate, endDate]);
+        `, queryParams);
+
+        // 获取所有发起人列表（用于前端筛选）
+        const [initiators] = await pool.query(`
+            SELECT DISTINCT initiator 
+            FROM orders 
+            WHERE initiator IS NOT NULL 
+            ORDER BY initiator
+        `);
 
         // 计算每日平均营业额
         const activeDays = Math.max(1, orderStats[0].activeDays);
@@ -573,10 +619,12 @@ app.get('/api/admin/stats', async (req, res) => {
             firstOrderDate: orderStats[0].firstOrderDate,
             lastOrderDate: orderStats[0].lastOrderDate,
             period: period,
+            initiator: initiator,
             dateRange: {
                 start: startDate,
                 end: endDate
             },
+            initiators: initiators.map(i => i.initiator).filter(Boolean),
             popularDishes: popularDishes.map(dish => ({
                 id: dish.id,
                 name: dish.name,
@@ -585,9 +633,6 @@ app.get('/api/admin/stats', async (req, res) => {
                 totalRevenue: parseFloat((Number(dish.totalRevenue) || 0).toFixed(2))
             }))
         };
-
-        // 添加调试日志
-        console.log('统计数据:', JSON.stringify(stats, null, 2));
 
         res.json(stats);
     } catch (error) {

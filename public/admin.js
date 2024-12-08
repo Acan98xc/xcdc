@@ -1,7 +1,29 @@
-document.addEventListener('DOMContentLoaded', () => {
+// 声明 WebSocket 变量
+// import pool from "express";
+
+let ws;
+// 修改筛选相关变量
+let currentFilters = {
+    initiator: 'all',
+    status: 'all',
+    dateRange: 'all',
+    startDate: null,
+    endDate: null,
+    statsUser: 'all'  // 添加统计用户筛选
+};
+// 声明图表变量
+// let popularDishesChart = null;
+// 添加声音提示功能
+let audioContext = null;
+let audioInitialized = false;
+// 声音设置
+let soundEnabled = true;
+
+document.addEventListener('DOMContentLoaded', async () => {
     initAudioContext();
-    initFilters();
     // initWebSocket();
+    await getUsers();
+    await initFilters();
 
     // 默认显示菜品管理部分
     showSection('dishes');
@@ -38,8 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 加载初始数据
-    loadDishes();
-    loadOrders(); // 加载订单
+    await loadDishes();
+    await loadOrders(); // 加载订单
 
 
     // 初始化声音设置
@@ -60,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 添加统计时间范围切换事件
     const statsPeriod = document.getElementById('stats-period');
     if (statsPeriod) {
-        loadStats();
-        statsPeriod.addEventListener('change', () => {
+        await loadStats();
+        statsPeriod.addEventListener('onchange', () => {
             loadStats();
         });
     }
@@ -72,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initTouchSupport();
     }
 });
+
 
 // 显示指定部分
 function showSection(sectionId) {
@@ -86,9 +109,6 @@ function showSection(sectionId) {
         selectedSection.style.display = 'block';
     }
 }
-
-// 声明 WebSocket 变量
-let ws;
 
 // 修改 WebSocket 连接初始化
 function initWebSocket() {
@@ -108,7 +128,7 @@ function initWebSocket() {
         console.log('WebSocket 连接已建立');
     };
 
-    ws.onmessage = function (event) {
+    ws.onmessage =async function (event) {
         console.log('收到WebSocket消息:', event.data);
         try {
             const data = JSON.parse(event.data);
@@ -119,7 +139,7 @@ function initWebSocket() {
 
                 // 如果当前在订单页面，自动刷新订单列表
                 if (document.getElementById('orders-section').style.display !== 'none') {
-                    loadOrders();
+                    await loadOrders();
                 }
             }
         } catch (error) {
@@ -168,42 +188,17 @@ function showNotification(message, type = 'success') {
     });
 }
 
-// 添加备用通知声音函数
-// function fallbackNotificationSound() {
-//     // 使用简单的 Web Audio API 生成提示音
-//     try {
-//         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-//         const oscillator = audioContext.createOscillator();
-//         const gainNode = audioContext.createGain();
+// document.querySelectorAll('.nav-link').forEach(link => {
+//     link.addEventListener('click', function (e) {
+//         e.preventDefault();
+//         const section = this.dataset.section;
+//         showSection(section);
 //
-//         oscillator.connect(gainNode);
-//         gainNode.connect(audioContext.destination);
-//
-//         oscillator.type = 'sine';
-//         oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音符
-//
-//         gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-//         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-//
-//         oscillator.start(audioContext.currentTime);
-//         oscillator.stop(audioContext.currentTime + 0.5);
-//     } catch (err) {
-//         console.log('备用提示音也无法播放:', err);
-//     }
-// }
-
-// 导航功能
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', function (e) {
-        e.preventDefault();
-        const section = this.dataset.section;
-        showSection(section);
-
-        // 更新导航状态
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        this.classList.add('active');
-    });
-});
+//         // 更新导航状态
+//         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+//         this.classList.add('active');
+//     });
+// });
 
 // 图片预览功能
 document.getElementById('dish-image').addEventListener('change', function (e) {
@@ -219,17 +214,20 @@ document.getElementById('dish-image').addEventListener('change', function (e) {
     }
 });
 
-// 修改筛选相关变量
-let currentFilters = {
-    status: 'all',
-    dateRange: 'all',
-    startDate: null,
-    endDate: null
-};
 // 初始化筛选器
-function initFilters() {
+async function initFilters() {
     const dateRangeSelect = document.getElementById('date-range');
     const customDateRange = document.querySelector('.custom-date-range');
+    const statsUserFilter = document.getElementById('stats-user-filter');
+    const orderinitiatorfilter = document.getElementById('order-initiator-filter')
+
+    // 初始化统计用户筛选
+    if (statsUserFilter && orderinitiatorfilter) {
+        const str = await getUsers()
+        statsUserFilter.innerHTML = '<option value="all">所有用户</option>' + str
+        orderinitiatorfilter.innerHTML = `<option value="all">全部</option>` + str
+    }
+
     // 日期范围选择事件
     dateRangeSelect.addEventListener('change', function () {
         if (this.value === 'custom') {
@@ -245,7 +243,7 @@ function initFilters() {
     setDateRange('all');
 }
 
-// 修改设置日期范围函数��添加 'all' 的处理
+// 修改设置日期范围函数添加 'all' 的处理
 function setDateRange(range) {
     const today = new Date();
     let startDate = new Date();
@@ -284,14 +282,29 @@ function formatDate(date) {
     return date.toISOString().split('T')[0];
 }
 
-// 修改应用筛选函数
+async function getUsers() {
+    const response = await fetch('api/admin/getAllUsers');
+    const users = await response.json()
+
+    const str = users.map(user => {
+        return `<option value="${user.username}">${user.username}</option>`
+    }
+    ).join('');
+    console.log(str);
+    return str
+}
+// getUsers();
+
+// 改应用筛选函数
 async function applyFilters() {
+    const initiator = document.getElementById('order-initiator-filter').value;
     const status = document.getElementById('order-status-filter').value;
     const dateRange = document.getElementById('date-range').value;
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
 
     currentFilters = {
+        initiator,
         status,
         dateRange,
         startDate,
@@ -304,12 +317,14 @@ async function applyFilters() {
 // 修改重置筛选函数
 function resetFilters() {
     document.getElementById('order-status-filter').value = 'all';
+    document.getElementById('order-initiator-filter').value = 'all';
     document.getElementById('date-range').value = 'all';
     setDateRange('all');
     document.querySelector('.custom-date-range').style.display = 'none';
 
     currentFilters = {
         status: 'all',
+        initiator: 'all',
         dateRange: 'all',
         startDate: null,
         endDate: null
@@ -321,27 +336,101 @@ function resetFilters() {
 // 修改加载订单列表函数
 async function loadOrders() {
     try {
-        const queryParams = new URLSearchParams({
-            status: currentFilters.status,
-            startDate: currentFilters.startDate || '',
-            endDate: currentFilters.endDate || ''
-        });
+        // 获取筛选条件
+        const status = document.getElementById('order-status-filter').value;
+        const initiator = document.getElementById('order-initiator-filter').value;
+        const dateRange = document.getElementById('date-range').value;
+        let startDate = document.getElementById('start-date').value;
+        let endDate = document.getElementById('end-date').value;
 
-        const response = await fetch(`/api/admin/orders?${queryParams}`);
-        const orders = await response.json();
+        // 构建查询参数
+        const params = new URLSearchParams();
+        if (status !== 'all') params.append('status', status);
+        if (initiator !== 'all') params.append('initiator', initiator);
+        if (dateRange !== 'all' && dateRange !== 'custom') {
+            const dates = getDateRange(dateRange);
+            startDate = dates.startDate;
+            endDate = dates.endDate;
+        }
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
 
-        renderOrderList(orders);
+        const response = await fetch(`/api/admin/orders?${params.toString()}`);
+        const data = await response.json();
 
-        // 检查是否有未完成的新订单
-        const newOrders = orders.filter(order => order.status !== 'completed');
+        // 更新用户筛选器选项
+        updateOrderUserOptions(data.initiators);
+
+        // 渲染订单列表
+        renderOrderList(data.orders);
+
+        // 检查是否有完成的新订单
+        const newOrders = data.orders.filter(order => order.status !== 'completed');
         if (newOrders.length > 0) {
             showNotification(`您有 ${newOrders.length} 个未完成的订单！`);
-            playNotificationSound(); // 播放声音通知
+            playNotificationSound();
         }
 
     } catch (error) {
-        console.error('加载订单失败:', error);
+        console.error('加载订单列表失败:', error);
+        showNotification('加载订单列表失败', 'error');
     }
+}
+
+// 更新订单用户筛选器选项
+function updateOrderUserOptions(initiators) {
+    const select = document.getElementById('order-initiator-filter');
+    const currentValue = select.value;
+
+    // 保存当前选中的值
+    const selectedValue = select.value;
+
+    // 清空现有选项（除了"全部用户"）
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    // 添加用户选项
+    if (Array.isArray(initiators)) {
+        initiators.forEach(initiator => {
+            const option = new Option(initiator, initiator);
+            select.add(option);
+        });
+
+        // 如果之前选中的值仍然存在，则恢复选中状态
+        if (selectedValue && initiators.includes(selectedValue)) {
+            select.value = selectedValue;
+        }
+    }
+}
+
+// 获取日期范围
+function getDateRange(range) {
+    const today = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+
+    switch (range) {
+        case 'today':
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'week':
+            startDate.setDate(today.getDate() - 7);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'month':
+            startDate.setMonth(today.getMonth() - 1);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+    }
+
+    return {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+    };
 }
 
 // 更新订单状态
@@ -364,7 +453,9 @@ async function updateOrderStatus(orderId, newStatus) {
         await loadOrders();
 
         // 显示成功提示
-        showNotification('订单状态已更新');
+        // showNotification('订单状态已更新');
+        console.log('订单状态已更新');
+
     } catch (error) {
         console.error('更新订单状态失败:', error);
         showNotification('更新订单状态失败: ' + error.message, 'error');
@@ -375,104 +466,157 @@ async function updateOrderStatus(orderId, newStatus) {
 async function showOrderDetails(orderId) {
     try {
         const response = await fetch(`/api/admin/orders/${orderId}`);
-        if (!response.ok) {
-            throw new Error('获取订单详情失败');
-        }
         const order = await response.json();
 
-        const modal = document.getElementById('order-modal');
-        const details = document.getElementById('order-details');
-
-        details.innerHTML = `
+        const orderDetails = document.getElementById('order-details');
+        orderDetails.innerHTML = `
             <div class="order-detail-header">
-                <h4>订单 #${order.id}</h4>
-                <span class="order-status status-${order.status || 'pending'}">${getStatusText(order.status || 'pending')}</span>
+                <h4>订单号: ${order.id}</h4>
+                <p>下单时间: ${new Date(order.order_date).toLocaleString()}</p>
+                <p>发起人: ${order.initiator || '未知'}</p>
             </div>
             <div class="order-detail-info">
-                <p>下单时间: ${new Date(order.order_date).toLocaleString()}</p>
-                <p>订单状态: ${getStatusText(order.status || 'pending')}</p>
+                <p>状态: ${getStatusText(order.status)}</p>
             </div>
             <div class="order-detail-items">
-                <h5>订单内容</h5>
-                <table class="order-items-table">
-                    <thead>
-                        <tr>
-                            <th>菜品</th>
-                            <th>数量</th>
-                            <th>单价</th>
-                            <th>小计</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${order.items.map(item => `
-                            <tr>
-                                <td>${item.name}</td>
-                                <td>${item.quantity}</td>
-                                <td>¥${item.price}</td>
-                                <td>¥${(item.price * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3">总计</td>
-                            <td>¥${order.total_amount}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+                <h5>订单内容:</h5>
+                <div class="order-items-list">
+                    ${order.items.map(item => `
+                        <div class="order-item-detail">
+                            <span class="item-name">${item.name}</span>
+                            <span class="item-quantity">x${item.quantity}</span>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         `;
 
-        showModal(modal);
+        // 显示模态框
+        const modal = document.getElementById('order-modal');
+        modal.style.display = 'block';
+        setTimeout(() => modal.classList.add('show'), 10);
     } catch (error) {
-        console.error('加载订单详情失败:', error);
-        showNotification('加载订单详情失败', 'error');
+        console.error('获取订单详情失败:', error);
+        showNotification('获取订单详情失败', 'error');
     }
 }
 
+// 加载统计数据
+async function loadStats() {
+    try {
+        const period = document.getElementById('stats-period').value;
+        const initiator = document.getElementById('stats-user').value;
 
+        const response = await fetch(`/api/admin/stats?period=${period}&initiator=${initiator}`);
+        const stats = await response.json();
 
-// 声明图表变量
-let popularDishesChart = null;
+        // 更新用户选择器选项
+        updateInitiatorOptions(stats.initiators);
 
-// 更新热销菜品图表
-function updatePopularDishesChart(popularDishes) {
-    const ctx = document.getElementById('popular-dishes-chart');
+        // 更新统计数据显示
+        updateStatsDisplay(stats);
 
-    // 如果图表已存在，销毁它
-    if (popularDishesChart) {
-        popularDishesChart.destroy();
+    } catch (error) {
+        console.error('加载统计数据失败:', error);
+        showNotification('加载统计数据失败', 'error');
+    }
+}
+
+// 更新发起人选择器选项
+function updateInitiatorOptions(initiators) {
+    const select = document.getElementById('stats-user');
+    const currentValue = select.value;
+
+    // 保存当前选中的值
+    const selectedValue = select.value;
+
+    // 清空现有选项（除了"全部用户"）
+    while (select.options.length > 1) {
+        select.remove(1);
     }
 
-    // 准备数据
+    // 添加发起人选项
+    initiators.forEach(initiator => {
+        const option = new Option(initiator, initiator);
+        select.add(option);
+    });
+
+    // 如果之前选中的值仍然存在，���恢复选中状态
+    if (selectedValue && initiators.includes(selectedValue)) {
+        select.value = selectedValue;
+    }
+}
+
+// 更新统计数据显示
+function updateStatsDisplay(stats) {
+    const revenueStats = document.getElementById('revenue-stats');
+
+    // 格式化日期显示
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '无数据';
+        return new Date(dateStr).toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    };
+
+    revenueStats.innerHTML = `
+        <div class="stats-item">
+            <span class="stats-label">订单总数</span>
+            <span class="stats-value">${stats.orderCount}单</span>
+        </div>
+        <div class="stats-item">
+            <span class="stats-label">下单天数</span>
+            <span class="stats-value">${stats.activeDays}天</span>
+        </div>
+        <div class="stats-item">
+            <span class="stats-label">统计时间</span>
+            <span class="stats-value">${formatDate(stats.firstOrderDate)} ~ ${formatDate(stats.lastOrderDate)}</span>
+        </div>
+    `;
+
+    // 更新热销排行图表
+    updatePopularDishesChart(stats.popularDishes);
+}
+
+// 更新热销排行图表
+function updatePopularDishesChart(popularDishes) {
+    const ctx = document.getElementById('popular-dishes-chart').getContext('2d');
+
+    // 如果已存在图表，先销毁它
+    if (window.popularDishesChart) {
+        window.popularDishesChart.destroy();
+    }
+
+    // 准备图表数据
     const labels = popularDishes.map(dish => dish.name);
     const quantities = popularDishes.map(dish => dish.totalQuantity);
 
     // 创建新图表
-    popularDishesChart = new Chart(ctx, {
+    window.popularDishesChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: [{
-                label: '数量',
-                data: quantities,
-                backgroundColor: generateColors(labels.length),
-                borderWidth: 1
-            }]
+            datasets: [
+                {
+                    label: '销售数量',
+                    data: quantities,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            indexAxis: 'y',  // 使用水平柱状图
             scales: {
-                x: {
+                y: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: '数量（份）'
-                    },
-                    ticks: {
-                        stepSize: 1
+                        text: '数量'
                     }
                 }
             },
@@ -482,87 +626,11 @@ function updatePopularDishesChart(popularDishes) {
                 },
                 title: {
                     display: true,
-                    text: '热销排行',
-                    font: { size: 16 }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return `销量: ${context.raw} 份`;
-                        }
-                    }
+                    text: '热销统计'
                 }
             }
         }
     });
-}
-
-// 修改加载统计数据��函数
-async function loadStats() {
-    try {
-        const period = document.getElementById('stats-period').value;
-        const response = await fetch(`/api/admin/stats?period=${period}`);
-        const stats = await response.json();
-        console.log(stats);
-
-        // 检查元素是否存在
-        const revenueStats = document.getElementById('revenue-stats');
-        if (!revenueStats) {
-            console.error('元素 revenue-stats 不存在');
-            return; // 退出函数
-        }
-
-        // 更新订单统计
-        revenueStats.innerHTML = `
-            <div class="stats-item">
-                <span class="stats-label">订单总数</span>
-                <span class="stats-value">${stats.orderCount}</span>
-            </div>
-            <div class="stats-item">
-                <span class="stats-label">天数</span>
-                <span class="stats-value">${stats.activeDays}天</span>
-            </div>
-            ${stats.firstOrderDate ? `
-            <div class="stats-item">
-                <span class="stats-label">统计时间</span>
-                <span class="stats-value">${new Date(stats.firstOrderDate).toLocaleDateString()} ~ ${new Date(stats.lastOrderDate).toLocaleDateString()}</span>
-            </div>
-            ` : ''}
-        `;
-
-        // 更新热销菜品图表
-        if (stats.popularDishes && stats.popularDishes.length > 0) {
-            updatePopularDishesChart(stats.popularDishes);
-            document.querySelector('.stats-grid').style.display = 'grid';
-        } else {
-            document.querySelector('.stats-grid').innerHTML = `
-                <div class="stats-card">
-                    <div class="no-data-message">
-                        <p>所选时间范围内暂无销售数据</p>
-                    </div>
-                </div>
-            `;
-        }
-
-    } catch (error) {
-        console.error('加载统计数据失败:', error);
-        showNotification('加载统计数据失败', 'error');
-    }
-}
-
-// 生成随机颜色
-function generateColors(count) {
-    const colors = [];
-    const baseHues = [0, 60, 120, 180, 240, 300]; // 基础色相值
-
-    for (let i = 0; i < count; i++) {
-        const hue = baseHues[i % baseHues.length];
-        const saturation = 70 + Math.random() * 10; // 70-80%
-        const lightness = 50 + Math.random() * 10; // 50-60%
-        colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
-    }
-
-    return colors;
 }
 
 // 辅助数
@@ -574,8 +642,6 @@ function getStatusText(status) {
     };
     return statusMap[status] || status;
 }
-
-
 
 // 加载菜品列表
 async function loadDishes() {
@@ -680,7 +746,7 @@ async function deleteDish(id) {
         });
 
         if (response.ok) {
-            loadDishes(); // 重新加载菜品列表
+            await loadDishes(); // 重新加载菜品列表
         } else {
             throw new Error('删除失败');
         }
@@ -716,7 +782,7 @@ async function handleDishSubmit(event) {
 
         if (response.ok) {
             hideDishForm();
-            loadDishes(); // 重新加载菜品列表
+            await loadDishes(); // 重新加载菜品列表
         } else {
             throw new Error('保存失败');
         }
@@ -725,9 +791,6 @@ async function handleDishSubmit(event) {
     }
 }
 
-// 添加点击模态框部关闭功能
-
-
 // 修改订单列表渲染，添加状态样式
 function renderOrderList(orders) {
     const container = document.getElementById('orders-list');
@@ -735,6 +798,9 @@ function renderOrderList(orders) {
         <div class="order-card">
             <div class="order-header">
                 <h3>订单 #${order.id}</h3>
+                <div class="uname">
+                    ${order.initiator}
+                </div>
                 <div class="order-status-actions">
                     <span class="order-status status-${order.status || 'pending'}">${getStatusText(order.status || 'pending')}</span>
                     <select onchange="updateOrderStatus(${order.id}, this.value)" class="status-select"
@@ -763,10 +829,6 @@ function hideOrderModal() {
     const modal = document.getElementById('order-modal');
     hideModal(modal);
 }
-
-// 添加声音提示功能
-let audioContext = null;
-let audioInitialized = false;
 
 // 初始化音频上下文
 function initAudioContext() {
@@ -874,9 +936,6 @@ function playFallbackSound() {
     }
 }
 
-// 声音设置
-let soundEnabled = true;
-
 // 添加移动端手势支持
 function initTouchSupport() {
     // 为图表添加触摸滑动支持
@@ -929,4 +988,119 @@ function initTouchSupport() {
             }
         }
     });
-} 
+}
+
+// function renderOrder(order) {
+//     return `
+//         <div class="order-item ${order.status}" data-order-id="${order.id}">
+//             <div class="order-header">
+//                 <span class="order-id">订单号: ${order.id}</span>
+//                 <span class="order-time">时间: ${new Date(order.timestamp).toLocaleString()}</span>
+//                 <span class="order-initiator">发起人: ${order.initiator || '未知'}</span>
+//             </div>
+//             <div class="order-content">
+//                 <div class="order-dishes">
+//                     ${order.items.map(item => `
+//                         <div class="order-dish">
+//                             <span>${item.name}</span>
+//                             <span>x${item.quantity}</span>
+//                             <span>¥${item.price.toFixed(2)}</span>
+//                         </div>
+//                     `).join('')}
+//                 </div>
+//                 <div class="order-total">
+//                     总计: ¥${order.total.toFixed(2)}
+//                 </div>
+//                 <div class="order-status">
+//                     状态: ${getStatusText(order.status)}
+//                 </div>
+//             </div>
+//             <div class="order-actions">
+//                 ${renderOrderActions(order)}
+//             </div>
+//         </div>
+//     `;
+// }
+
+// 添加备用通知声音函数
+// function fallbackNotificationSound() {
+//     // 使用简单的 Web Audio API 生成提示音
+//     try {
+//         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+//         const oscillator = audioContext.createOscillator();
+//         const gainNode = audioContext.createGain();
+//
+//         oscillator.connect(gainNode);
+//         gainNode.connect(audioContext.destination);
+//
+//         oscillator.type = 'sine';
+//         oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 音符
+//
+//         gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+//         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+//
+//         oscillator.start(audioContext.currentTime);
+//         oscillator.stop(audioContext.currentTime + 0.5);
+//     } catch (err) {
+//         console.log('备用提示音也无法播放:', err);
+//     }
+// }
+// 导航功能
+
+// 渲染订单列表
+// function renderOrderList(orders) {
+//     const ordersList = document.getElementById('orders-list');
+//
+//     if (!Array.isArray(orders) || orders.length === 0) {
+//         ordersList.innerHTML = '<div class="no-data-message"><p>暂无订单数据</p></div>';
+//         return;
+//     }
+//
+//     ordersList.innerHTML = orders.map(order => `
+//         <div class="order-item ${order.status}" data-order-id="${order.id}">
+//             <div class="order-header">
+//                 <span class="order-id">订单号: ${order.id}</span>
+//                 <span class="order-time">时间: ${new Date(order.order_date).toLocaleString()}</span>
+//                 <span class="order-initiator">发起人: ${order.initiator}</span>
+//             </div>
+//             <div class="order-content">
+//                 <div class="order-dishes">${order.items}</div>
+//                 <div class="order-status">状态: ${getStatusText(order.status)}</div>
+//             </div>
+//             <div class="order-actions">
+//                 ${renderOrderActions(order)}
+//             </div>
+//         </div>
+//     `).join('');
+// }
+
+// 生成随机颜色
+// function generateColors(count) {
+//     const colors = [];
+//     const baseHues = [0, 60, 120, 180, 240, 300]; // 基础色相值
+//
+//     for (let i = 0; i < count; i++) {
+//         const hue = baseHues[i % baseHues.length];
+//         const saturation = 70 + Math.random() * 10; // 70-80%
+//         const lightness = 50 + Math.random() * 10; // 50-60%
+//         colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+//     }
+//
+//     return colors;
+// }
+
+// 应用筛选器
+// function applyFilters() {
+//     loadOrders();
+// }
+
+// 重置筛选器
+// function resetFilters() {
+//     document.getElementById('order-status-filter').value = 'all';
+//     document.getElementById('order-user-filter').value = 'all';
+//     document.getElementById('date-range').value = 'all';
+//     document.getElementById('start-date').value = '';
+//     document.getElementById('end-date').value = '';
+//     document.querySelector('.custom-date-range').style.display = 'none';
+//     loadOrders();
+// }

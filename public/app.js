@@ -1,7 +1,12 @@
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
+let uname = localStorage.getItem('uname') || [];
 let addedItems = JSON.parse(localStorage.getItem('addedItems')) || {};
 let currentPage = 1;
 const itemsPerPage = 8;
+let currentOrderPage = 1;
+const ordersPerPage = 3;
+let wheelItems = [];
+let spinning = false;
 
 // 获取菜单
 async function getMenu(page = 1) {
@@ -136,7 +141,7 @@ async function addToCart(itemId, name, price, button) {
             cart[existingItemIndex].quantity += 1;
         } else {
             // 如果商品不在购物车中，则添加它
-            cart.push({ id: itemId, name: freshItem.name, price, quantity: 1 });
+            cart.push({ id: itemId, name: freshItem.name, price, quantity: 1, uname });
             addedItems[itemId] = true;
         }
 
@@ -240,6 +245,7 @@ async function submitOrder() {
             return true;
         }).map(item => ({
             id: parseInt(item.id),
+            uname: item.uname,
             name: item.name,
             price: parseFloat(item.price),
             quantity: parseInt(item.quantity)
@@ -439,6 +445,7 @@ function initMobileMenu() {
     }
 }
 
+//登录验证
 function checkAuth() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -453,15 +460,7 @@ function init() {
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
 
     initMobileMenu();
-    const logout_Button = document.getElementById('logout-button');
-    // console.log(logout_Button);
 
-    if (logout_Button) {
-        logout_Button.addEventListener('click', function () {
-            localStorage.removeItem('token'); // 清除 JWT
-            window.location.href = 'login.html'; // 重定向到登录页面
-        });
-    }
 
     if (currentPath === 'index.html' || currentPath === '') {
         getMenu(currentPage);
@@ -480,29 +479,19 @@ function init() {
             spinButton.addEventListener('click', spinWheel);
         }
     }
-}
 
-// 添加一个页面加载完成后的事件监听器
-window.addEventListener('load', () => {
-    // 检查是否是页面刷新
-    if (performance.navigation.type === 1) {
-        console.log('页面被刷新');
-        clearCart(); // 只在页面刷新时清空购物车
+    const logout_Button = document.getElementById('logout-button');
+    // console.log(logout_Button);
+
+    if (logout_Button) {
+        logout_Button.addEventListener('click', function () {
+            localStorage.removeItem('token'); // 清除 JWT
+            localStorage.removeItem('cart'); //
+            localStorage.removeItem('uname'); //
+            window.location.href = 'login.html'; // 重定向到登录页面
+        });
     }
-});
-
-// 等待 DOM 加载完成后初始化
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
 }
-
-let currentOrderPage = 1;
-const ordersPerPage = 3;
-
-let wheelItems = [];
-let spinning = false;
 
 async function initWheel() {
     try {
@@ -666,5 +655,21 @@ function wheelshowcart() {
     }
 }
 
-// wheelshowcart()
+// 添加一个页面加载完成后的事件监听器
+window.addEventListener('load', () => {
+    // 检查是否是页面刷新
+    if (performance.navigation.type === 1) {
+        console.log('页面被刷新');
+        clearCart(); // 只在页面刷新时清空购物车
+    }
+});
+
+// 等待 DOM 加载完成后初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+
 

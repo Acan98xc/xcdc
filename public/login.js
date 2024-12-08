@@ -18,8 +18,10 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
 
         if (!response.ok) {
             throw new Error(data.error)
-        };
+        }
         localStorage.setItem('token', data.token); // 存储 JWT
+        localStorage.setItem('uname', username); // 存储用户名
+
         window.location.href = 'index.html'; // 登录成功后重定向到首页
     } catch (error) {
         alert(error.message, 88);

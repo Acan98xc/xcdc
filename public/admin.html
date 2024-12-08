@@ -54,6 +54,12 @@
                         </select>
                     </div>
                     <div class="filter-group">
+                        <label for="order-initiator-filter">发起人</label>
+                        <select id="order-initiator-filter">
+                            <option value="all">全部用户</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <label for="date-range">日期范围</label>
                         <select id="date-range">
                             <option value="all" selected>全部时间</option>
@@ -81,12 +87,21 @@
             <div class="section-header">
                 <h2>统计分析</h2>
                 <div class="stats-filters">
-                    <select id="stats-period" onchange="loadStats()">
-                        <option value="all">全部数据</option>
-                        <option value="month">近30天</option>
-                        <option value="week">近7天</option>
-                        <option value="today">今日</option>
-                    </select>
+                    <div class="filter-group">
+                        <label for="stats-period">时间范围</label>
+                        <select id="stats-period" onchange="loadStats()">
+                            <option value="all">全部数据</option>
+                            <option value="month">近30天</option>
+                            <option value="week">近7天</option>
+                            <option value="today">今日</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="stats-user">发起人</label>
+                        <select id="stats-user" onchange="loadStats()">
+                            <option value="all">全部用户</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="stats-grid">
@@ -94,7 +109,7 @@
                     <h3>订单统计</h3>
                     <div id="revenue-stats"></div>
                 </div>
-                <div class="stats-card">
+                <div class="stats-card rxph">
                     <h3>热销排行</h3>
                     <div class="chart-container">
                         <canvas id="popular-dishes-chart"></canvas>
