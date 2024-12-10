@@ -8,6 +8,7 @@ const ordersPerPage = 3;
 let wheelItems = [];
 let spinning = false;
 let ws;
+let searchTimeout;
 
 // 初始化WebSocket连接
 function initWebSocket() {
@@ -850,6 +851,52 @@ function updateUserDisplay() {
     }
 }
 
+// 搜索功能
+function initSearchFeature() {
+    const searchInput = document.getElementById('search-input');
+    const searchButton = document.getElementById('search-button');
+
+    if (searchInput && searchButton) {
+        // 输入框防抖动搜索
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                performSearch(searchInput.value);
+            }, 300);
+        });
+
+        // 搜索按钮点击搜索
+        searchButton.addEventListener('click', () => {
+            performSearch(searchInput.value);
+        });
+
+        // 回车键搜索
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch(searchInput.value);
+            }
+        });
+    }
+}
+
+// 执行搜索
+async function performSearch(query) {
+    try {
+        const response = await fetch(`/api/menu/search?query=${encodeURIComponent(query)}&page=${currentPage}&limit=${itemsPerPage}`);
+        console.log(query);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        console.log(response);
+        const data = await response.json();
+        console.log(data);
+        displayMenu(data.items);
+        displayPagination(data.currentPage, data.totalPages);
+    } catch (error) {
+        console.error('搜索失败:', error);
+        showModal('搜索失败，请稍后重试', 'error');
+    }
+}
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', async () => {
     // 检查登录状态
@@ -867,16 +914,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 加载菜单数据
     await getMenu(currentPage);
-});
-
-
-// 添加一个页面加载完成后的事件监听器
-window.addEventListener('load', () => {
-    // 检查是否是页面刷新
-    if (performance.navigation.type === 1) {
-        console.log('页面被刷新');
-        clearCart(); // 只在页面刷新时清空购物车
-    }
 });
 
 // 等待 DOM 加载完成后初始化
@@ -899,6 +936,7 @@ function init() {
     }
 
     initMobileMenu();
+    initSearchFeature();
 
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     if (currentPath === 'index.html' || currentPath === '') {

@@ -107,6 +107,42 @@ nav ul li .user-info {
     margin: 0;
 }
 
+.search-container {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 0;
+}
+
+#search-input {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+#search-input:focus {
+    border-color: var(--secondary-color);
+}
+
+#search-button {
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#search-button:hover {
+    background-color: var(--secondary-color);
+}
+
 main {
     flex-grow: 1;
     max-width: 1200px;
@@ -127,6 +163,18 @@ section {
 
 section:hover {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+#menu h2 {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.5rem;
+    margin-top: 5px;
+    margin-bottom: 20px;
+    font-size: 28px;
+    text-align: left;
+    font-weight: bold;
+    height: auto;
 }
 
 h2 {
@@ -433,7 +481,7 @@ button:active {
 }
 
 .content-wrapper {
-    padding-top: 0;
+    padding-top: 0px;
 }
 
 .submit-order-btn {

@@ -912,5 +912,53 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// 添加搜索路由
+app.get('/api/menu/search', async (req, res) => {
+    try {
+        const query = req.query.query || '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 8;
+        const offset = (page - 1) * limit;
+
+        const searchPattern = `%${query}%`;
+
+        // 修改查询方式，使用字符串拼接的方式处理 LIMIT 和 OFFSET
+        const searchQuery = `
+            SELECT id, name, price, image_url 
+            FROM menu_items 
+            WHERE name LIKE ? OR description LIKE ?
+        `;
+
+        // 执行搜索查询
+        const [items] = await pool.query(
+            searchQuery + ` LIMIT ${limit} OFFSET ${offset}`, 
+            [searchPattern, searchPattern]
+        );
+        
+        // 计算总数的查询
+        const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM menu_items 
+            WHERE name LIKE ? OR description LIKE ?
+        `;
+
+        // 获取总数
+        const [countResult] = await pool.query(countQuery, [searchPattern, searchPattern]);
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limit);
+
+        res.json({
+            items,
+            currentPage: page,
+            totalPages,
+            total
+        });
+
+    } catch (error) {
+        console.error('搜索菜品失败:', error);
+        res.status(500).json({ error: '搜索失败' });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`服务器运行在端口 ${PORT}`));
