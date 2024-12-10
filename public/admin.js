@@ -120,16 +120,16 @@ function initWebSocket() {
     // 创建新的 WebSocket 连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}`;
-    console.log('Connecting to WebSocket:', wsUrl);
+    // console.log('Connecting to WebSocket:', wsUrl);
 
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function () {
-        console.log('WebSocket 连接已建立');
+        // console.log('WebSocket 连接已建立');
     };
 
-    ws.onmessage =async function (event) {
-        console.log('收到WebSocket消息:', event.data);
+    ws.onmessage = async function (event) {
+        // console.log('收到WebSocket消息:', event.data);
         try {
             const data = JSON.parse(event.data);
             if (data.type === 'new_order') {
@@ -290,7 +290,7 @@ async function getUsers() {
         return `<option value="${user.username}">${user.username}</option>`
     }
     ).join('');
-    console.log(str);
+    // console.log(str);
     return str
 }
 // getUsers();
@@ -541,7 +541,7 @@ function updateInitiatorOptions(initiators) {
         select.add(option);
     });
 
-    // 如果之前选中的值仍然存在，���恢复选中状态
+    // 如果之前选中的值仍然存在，恢复选中状态
     if (selectedValue && initiators.includes(selectedValue)) {
         select.value = selectedValue;
     }
@@ -701,22 +701,26 @@ function showDishForm(dish = null) {
     // 重置表单
     form.reset();
     preview.style.display = 'none';
+    preview.src = '';
 
-    // 设置表单数据
+    // 如果是编辑现有菜品
     if (dish) {
         document.getElementById('dish-id').value = dish.id;
         document.getElementById('dish-name').value = dish.name;
         document.getElementById('dish-price').value = dish.price;
+        document.getElementById('dish-show-popup').checked = dish.show_popup;
+
         if (dish.image_url) {
             preview.src = dish.image_url;
             preview.style.display = 'block';
         }
     } else {
         document.getElementById('dish-id').value = '';
+        document.getElementById('dish-show-popup').checked = false;
     }
 
-    // 显示模态框
-    showModal(modal);
+    modal.style.display = 'block';
+    setTimeout(() => modal.classList.add('show'), 10);
 }
 
 // 修改 hideDishForm
@@ -759,35 +763,42 @@ async function deleteDish(id) {
 async function handleDishSubmit(event) {
     event.preventDefault();
 
-    const formData = new FormData();
-    const id = document.getElementById('dish-id').value;
-    const name = document.getElementById('dish-name').value;
-    const price = document.getElementById('dish-price').value;
-    const imageFile = document.getElementById('dish-image').files[0];
-
-    formData.append('name', name);
-    formData.append('price', price);
-    if (imageFile) {
-        formData.append('image', imageFile);
-    }
-
     try {
-        const url = id ? `/api/admin/dishes/${id}` : '/api/admin/dishes';
-        const method = id ? 'PUT' : 'POST';
+        const formData = new FormData();
+        const dishId = document.getElementById('dish-id').value;
+        const name = document.getElementById('dish-name').value;
+        const price = document.getElementById('dish-price').value;
+        const imageFile = document.getElementById('dish-image').files[0];
+        const showPopup = document.getElementById('dish-show-popup').checked;
+
+        formData.append('name', name);
+        formData.append('price', price);
+        formData.append('showPopup', showPopup);
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        const url = dishId ?
+            `/api/admin/dishes/${dishId}` :
+            '/api/admin/dishes';
+
+        const method = dishId ? 'PUT' : 'POST';
 
         const response = await fetch(url, {
             method: method,
             body: formData
         });
 
-        if (response.ok) {
-            hideDishForm();
-            await loadDishes(); // 重新加载菜品列表
-        } else {
-            throw new Error('保存失败');
+        if (!response.ok) {
+            throw new Error('提交失败');
         }
+
+        showNotification(dishId ? '菜品更新成功' : '菜品添加成功', 'success');
+        hideDishForm();
+        loadDishes();
     } catch (error) {
-        console.error('保存菜品失败:', error);
+        console.error('提交菜品失败:', error);
+        showNotification('提交失败', 'error');
     }
 }
 
@@ -859,7 +870,7 @@ function toggleSound() {
         initAudioContext();
     }
 
-    // 更新按钮状态
+    // 更新���钮状态
     button.classList.toggle('sound-muted', !soundEnabled);
     button.querySelector('.sound-icon').textContent = soundEnabled ? '🔔' : '🔕';
 

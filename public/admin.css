@@ -100,41 +100,57 @@
 .modal.show {
     opacity: 1;
     visibility: visible;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: block;
 }
 
 .modal-content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background: white;
-    padding: 20px;
+    padding: 25px;
     border-radius: 8px;
     width: 90%;
     max-width: 500px;
-    position: relative;
-    transform: translateY(-20px);
-    transition: transform 0.3s ease;
-}
-
-.modal.show .modal-content {
-    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
-    color: #666;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
 }
 
-.form-group input {
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="file"] {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input[type="file"] {
+    padding: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: 20%;
 }
 
 .form-actions {
@@ -315,6 +331,20 @@
     .custom-date-range {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .modal.show {
+        padding-top: 20px;
+    }
+
+    .modal-content {
+        width: 80%;
+        padding: 10px 10px 10px 10px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+        width: 90%;
     }
 }
 
@@ -549,7 +579,7 @@
     font-size: 1.1em;
 }
 
-/* 修改图表容器样式 */
+/* 修改图容器样式 */
 .chart-container {
     position: relative;
     height: 300px;
@@ -720,8 +750,8 @@
 
     /* 模态框优化 */
     .modal-content {
-        width: 95%;
-        margin: 10px;
+        width: 80%;
+        /* margin: 10px; */
         padding: 15px;
     }
 
@@ -729,6 +759,7 @@
     .form-group input,
     .form-group select {
         font-size: 16px;
+        width: 80%;
         /* 防止 iOS 自动缩放 */
         padding: 10px;
     }

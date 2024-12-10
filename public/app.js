@@ -1,5 +1,5 @@
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let uname = localStorage.getItem('uname') || [];
+let uname = localStorage.getItem('username') || [];
 let addedItems = JSON.parse(localStorage.getItem('addedItems')) || {};
 let currentPage = 1;
 const itemsPerPage = 8;
@@ -7,6 +7,165 @@ let currentOrderPage = 1;
 const ordersPerPage = 3;
 let wheelItems = [];
 let spinning = false;
+let ws;
+
+// 初始化WebSocket连接
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = function () {
+        console.log('WebSocket连接已建立');
+        // 连接成功后检查未读通知
+        checkNotifications();
+    };
+
+    ws.onmessage = function (event) {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'new_dish' && data.notificationId) {
+                // 检查通知是否已被关闭
+                const closedNotifications = getClosedNotifications();
+                if (!closedNotifications.includes(data.notificationId.toString())) {
+                    showNewDishModal(data.dish, data.message, data.notificationId);
+                }
+            }
+        } catch (error) {
+            console.error('处理WebSocket消息失败:', error);
+        }
+    };
+
+    ws.onclose = function () {
+        console.log('WebSocket连接已关闭，尝试重新连接...');
+        setTimeout(initWebSocket, 3000);
+    };
+
+    ws.onerror = function (error) {
+        console.error('WebSocket错误:', error);
+    };
+}
+
+// 检查未读通知
+async function checkNotifications() {
+    try {
+        const username = localStorage.getItem('username');
+        if (!username) return;
+
+        const response = await fetch(`/api/notifications?username=${encodeURIComponent(username)}`);
+        const notifications = await response.json();
+
+        // 获取已关闭的通知ID列表
+        const closedNotifications = getClosedNotifications();
+
+        // 显示所有未关闭且未读的活跃通知
+        notifications.forEach(notification => {
+            if (notification.type === 'new_dish' &&
+                notification.data &&
+                !notification.is_read &&
+                !closedNotifications.includes(notification.id.toString())) {
+                showNewDishModal(notification.data, notification.message, notification.id);
+            }
+        });
+    } catch (error) {
+        console.error('获取通知失败:', error);
+    }
+}
+
+// 获取已关闭的通知ID列表
+function getClosedNotifications() {
+    const username = localStorage.getItem('username');
+    const key = `closedNotifications_${username}`;
+    const closed = localStorage.getItem(key);
+    return closed ? JSON.parse(closed) : [];
+}
+
+// 记录已关闭的通知
+function markNotificationAsClosed(notificationId) {
+    const username = localStorage.getItem('username');
+    const key = `closedNotifications_${username}`;
+    const closedNotifications = getClosedNotifications();
+
+    if (!closedNotifications.includes(notificationId.toString())) {
+        closedNotifications.push(notificationId.toString());
+        localStorage.setItem(key, JSON.stringify(closedNotifications));
+
+        // 向服务器发送标记已读请求
+        fetch(`/api/notifications/${notificationId}/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username })
+        }).catch(error => console.error('标记通知已读失败:', error));
+    }
+}
+
+// 显示新品提醒弹窗
+function showNewDishModal(dish, message, notificationId) {
+    const modal = document.getElementById('new-dish-modal');
+    if (!modal) return;
+
+    const content = document.getElementById('new-dish-content');
+    if (!content) return;
+
+    try {
+        // 确保dish是一个对象
+        const dishData = typeof dish === 'string' ? JSON.parse(dish) : dish;
+
+        content.innerHTML = `
+            <div class="notification-info">
+                ${dishData.image_url ? `<img src="${dishData.image_url}" alt="${dishData.name}" class="new-dish-image">` : ''}
+                <div class="new-dish-details">
+                    <p class="dish-name">${dishData.name}</p>
+                </div>
+            </div>
+        `;
+
+        // 存储当前通知ID到模态框
+        modal.dataset.notificationId = notificationId;
+
+        modal.style.display = 'block';
+        setTimeout(() => modal.classList.add('show'), 10);
+
+        // 3秒后自动关闭
+        setTimeout(() => {
+            closeNewDishModal(true);  // true表示自动关闭
+        }, 3000);
+    } catch (error) {
+        console.error('显示新品提醒失败:', error);
+    }
+}
+
+// 关闭新品提醒弹窗
+function closeNewDishModal(autoClose = false) {
+    const modal = document.getElementById('new-dish-modal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+
+    // 如果不是自动关闭，则记录该通知已被用户手动关闭
+    if (!autoClose) {
+        const notificationId = modal.dataset.notificationId;
+        if (notificationId) {
+            markNotificationAsClosed(notificationId);
+        }
+    }
+
+    setTimeout(() => {
+        modal.style.display = 'none';
+        modal.dataset.notificationId = '';  // 清除通知ID
+    }, 300);
+}
+
+// 处理退出登录
+function handleLogout() {
+    localStorage.removeItem('token'); // 清除 JWT
+    localStorage.removeItem('cart'); //
+    localStorage.removeItem('username');
+    window.location.href = 'login.html';
+}
 
 // 获取菜单
 async function getMenu(page = 1) {
@@ -116,7 +275,7 @@ async function addToCart(itemId, name, price, button) {
         const freshItem = await response.json();
         // console.log('Fresh item data:', freshItem);
 
-        // 使用最新的价格信息
+        // 用最新的价格信息
         price = parseFloat(freshItem.price);
 
         if (isNaN(price) || price < 0) {
@@ -141,7 +300,7 @@ async function addToCart(itemId, name, price, button) {
             cart[existingItemIndex].quantity += 1;
         } else {
             // 如果商品不在购物车中，则添加它
-            cart.push({ id: itemId, name: freshItem.name, price, quantity: 1, uname });
+            cart.push({ id: itemId, name: freshItem.name, price, quantity: 1, uname:uname});
             addedItems[itemId] = true;
         }
 
@@ -264,9 +423,8 @@ async function submitOrder() {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`服务器错误: ${errorData.error || response.statusText}`);
+            throw new Error(errorData.error || response.statusText);
         }
-        const result = await response.json();
 
         // 显示成功消息
         showModal('订单提交成功！');
@@ -281,11 +439,77 @@ async function submitOrder() {
         displayCart();
     } catch (error) {
         console.error('提交订单失败:', error);
-        showModal(`提交订单失败: ${error.message}`, 'error');
+        alert(`提交订单失败: ${error.message}`);
         submitButton.disabled = false;
-        submitButton.textContent = '提交订单';
+        submitButton.textContent = '提交';
     }
 }
+// 提交订单
+// async function submitOrder() {
+//     if (cart.length === 0) {
+//         alert('购物车为空，无法提交订单');
+//         return;
+//     }
+//
+//     const submitButton = document.getElementById('submit-order');
+//     submitButton.disabled = true;
+//     submitButton.textContent = '提交中...';
+//
+//     try {
+//         // console.log('Original cart:', JSON.stringify(cart, null, 2));
+//
+//         // 确保购物车中的数据都是有效的
+//         const validCart = cart.filter(item => {
+//             const price = parseFloat(item.price);
+//             const quantity = parseInt(item.quantity);
+//             if (isNaN(price) || isNaN(quantity) || price < 0 || quantity <= 0) {
+//                 console.error(`Invalid item in cart: ${JSON.stringify(item)}`);
+//                 return false;
+//             }
+//             return true;
+//         }).map(item => ({
+//             id: parseInt(item.id),
+//             uname: item.uname,
+//             name: item.name,
+//             price: parseFloat(item.price),
+//             quantity: parseInt(item.quantity)
+//         }));
+//
+//         if (validCart.length === 0) {
+//             throw new Error('购物车中没有有效的商品');
+//         }
+//
+//         // console.log('Sending to server:', JSON.stringify(validCart, null, 2));
+//
+//         const response = await fetch('/api/orders', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify(validCart),
+//         });
+//         if (!response.ok) {
+//             const errorData = await response.json();
+//             throw new Error(`服务器错误: ${errorData.error || response.statusText}`);
+//         }
+//         const result = await response.json();
+//
+//         // 示成功消息
+//         showModal('订单提交成功！');
+//
+//         clearCart(); // 清空购物车
+//
+//         // 恢复提交按钮状态
+//         submitButton.disabled = false;
+//         submitButton.textContent = '提交订单';
+//
+//         // 更新购物车显示
+//         displayCart();
+//     } catch (error) {
+//         console.error('提交订单失败:', error);
+//         showModal(`提交订单失败: ${error.message}`, 'error');
+//         submitButton.disabled = false;
+//         submitButton.textContent = '提交订单';
+//     }
+// }
 
 // 显示模态弹窗
 function showModal(message, type = 'success') {
@@ -305,7 +529,7 @@ function showModal(message, type = 'success') {
     setTimeout(() => {
         modal.classList.remove('show');
         setTimeout(() => modal.remove(), 300); // 等待动画完成后移除元素
-    }, 1000);
+    }, 750);
 }
 
 // 清空购物车
@@ -449,48 +673,10 @@ function initMobileMenu() {
 function checkAuth() {
     const token = localStorage.getItem('token');
     if (!token) {
-        window.location.href = 'login.html'; // 如果没有 token，重定向到登录页面
+        window.location.href = 'login.html';
+        return false;
     }
-}
-
-// 在 init 函数中调用 checkAuth
-function init() {
-    checkAuth(); // 检查用户是否已登录
-    console.log('开始初始化');
-    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-
-    initMobileMenu();
-
-
-    if (currentPath === 'index.html' || currentPath === '') {
-        getMenu(currentPage);
-    } else if (currentPath === 'cart.html') {
-        displayCart();
-        const submitOrderButton = document.getElementById('submit-order');
-        if (submitOrderButton) {
-            submitOrderButton.addEventListener('click', submitOrder);
-        }
-    } else if (currentPath === 'orders.html') {
-        getOrders(currentOrderPage);
-    } else if (currentPath === 'wheel.html') {
-        initWheel();
-        const spinButton = document.getElementById('spin-button');
-        if (spinButton) {
-            spinButton.addEventListener('click', spinWheel);
-        }
-    }
-
-    const logout_Button = document.getElementById('logout-button');
-    // console.log(logout_Button);
-
-    if (logout_Button) {
-        logout_Button.addEventListener('click', function () {
-            localStorage.removeItem('token'); // 清除 JWT
-            localStorage.removeItem('cart'); //
-            localStorage.removeItem('uname'); //
-            window.location.href = 'login.html'; // 重定向到登录页面
-        });
-    }
+    return true;
 }
 
 async function initWheel() {
@@ -655,6 +841,35 @@ function wheelshowcart() {
     }
 }
 
+// 更新用户显示
+function updateUserDisplay() {
+    const currentUser = localStorage.getItem('username');
+    const userElement = document.getElementById('current-user');
+    if (userElement) {
+        userElement.textContent = currentUser || '未登录';
+    }
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', async () => {
+    // 检查登录状态
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // 更新用户显示
+    updateUserDisplay();
+
+    // 初始化WebSocket连接
+    initWebSocket();
+
+    // 加载菜单数据
+    await getMenu(currentPage);
+});
+
+
 // 添加一个页面加载完成后的事件监听器
 window.addEventListener('load', () => {
     // 检查是否是页面刷新
@@ -670,6 +885,39 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+// 在 init 函数中调用 checkAuth
+function init() {
+    console.log('开始初始化');
+    if (!checkAuth()) return;
+    // 更新用户显示
+    updateUserDisplay();
+    // 添加退出登录事件监听
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+
+    initMobileMenu();
+
+    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    if (currentPath === 'index.html' || currentPath === '') {
+        getMenu(currentPage);
+    } else if (currentPath === 'cart.html') {
+        displayCart();
+        const submitOrderButton = document.getElementById('submit-order');
+        if (submitOrderButton) {
+            submitOrderButton.addEventListener('click', submitOrder);
+        }
+    } else if (currentPath === 'orders.html') {
+        getOrders(currentOrderPage);
+    } else if (currentPath === 'wheel.html') {
+        initWheel();
+        const spinButton = document.getElementById('spin-button');
+        if (spinButton) {
+            spinButton.addEventListener('click', spinWheel);
+        }
+    }}
 
 
 

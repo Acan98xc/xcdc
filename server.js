@@ -93,18 +93,28 @@ const server = http.createServer(app);
 // 创建 WebSocket 服务器
 const wss = new WebSocket.Server({ server });
 
-// 存储所有连接的管理端 WebSocket 客户端
+// 存储所有连接的WebSocket客户端
+const clients = new Set();
 const adminClients = new Set();
 
 // WebSocket 连接处理
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
     console.log('新的WebSocket连接已建立');
 
-    // 将新连接的客户端添加到集合中
-    adminClients.add(ws);
-    console.log(`当前活动连接数: ${adminClients.size}`);
+    // 判断是否是管理端连接
+    const isAdmin = req.url.includes('/admin');
 
-    // 发送测试消息
+    if (isAdmin) {
+        // 管理端连接
+        adminClients.add(ws);
+        console.log(`当前管理端连接数: ${adminClients.size}`);
+    } else {
+        // 客户端连接
+        clients.add(ws);
+        console.log(`当前客户端连接数: ${clients.size}`);
+    }
+
+    // 发送连接成功消息
     ws.send(JSON.stringify({
         type: 'connection_established',
         message: '连接成功'
@@ -113,8 +123,13 @@ wss.on('connection', (ws) => {
     // 连接关闭时移除客户端
     ws.on('close', () => {
         console.log('WebSocket连接已关闭');
-        adminClients.delete(ws);
-        console.log(`当前活动连接数: ${adminClients.size}`);
+        if (isAdmin) {
+            adminClients.delete(ws);
+            console.log(`当前管理端连接数: ${adminClients.size}`);
+        } else {
+            clients.delete(ws);
+            console.log(`当前客户端连接数: ${clients.size}`);
+        }
     });
 
     // 错误处理
@@ -122,6 +137,26 @@ wss.on('connection', (ws) => {
         console.error('WebSocket错误:', error);
     });
 });
+
+// 向所有客户端广播新品通知
+function broadcastNewDish(dish, message) {
+    const notification = JSON.stringify({
+        type: 'new_dish',
+        dish: dish,
+        message: message
+    });
+
+    clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            try {
+                client.send(notification);
+                console.log('成功发送新品通知到客户端');
+            } catch (error) {
+                console.error('发送通知失败:', error);
+            }
+        }
+    });
+}
 
 // 广播新订单通知给所有管理端
 function broadcastNewOrder(orderId) {
@@ -238,7 +273,7 @@ app.get('/api/orders', async (req, res) => {
             OFFSET ?
         `, [limit, offset]);
 
-        console.log(orders);
+        // console.log(orders);
         const [countResult] = await pool.query('SELECT COUNT(*) as total FROM orders');
         const totalItems = countResult[0].total;
 
@@ -310,19 +345,164 @@ app.get('/api/admin/dishes/:id', async (req, res) => {
     }
 });
 
-// 修改添加新菜品
+// 在数据库初始化部分添加用户通知关联表
+// const createUserNotificationsTable = `
+//     CREATE TABLE IF NOT EXISTS user_notifications (
+//         id INT AUTO_INCREMENT PRIMARY KEY,
+//         user_id VARCHAR(255) NOT NULL,
+//         notification_id INT NOT NULL,
+//         is_read BOOLEAN DEFAULT FALSE,
+//         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//         FOREIGN KEY (notification_id) REFERENCES notifications(id)
+//     )
+// `;
+// 在初始化数据库表的部分添加
+// pool.query(createUserNotificationsTable)
+//     .then(() => console.log('用户通知关联表创建成功'))
+//     .catch(err => console.error('创建用户通知关联表失败:', err));
+
+// 修改保存通知的函数
+async function saveNotification(type, title, message, data) {
+    try {
+        const jsonData = typeof data === 'string' ? data : JSON.stringify(data);
+
+        // 保存通知，expire_at 设置为 NULL 表示永不过期
+        const [result] = await pool.query(
+            'INSERT INTO notifications (type, title, message, data, expire_at) VALUES (?, ?, ?, ?, NULL)',
+            [type, title, message, jsonData]
+        );
+
+        const notificationId = result.insertId;
+
+        // 获取所有用户
+        const [users] = await pool.query('SELECT username FROM users');
+
+        // 为每个用户创建通知关联
+        for (const user of users) {
+            await pool.query(
+                'INSERT INTO user_notifications (user_id, notification_id) VALUES (?, ?)',
+                [user.username, notificationId]
+            );
+        }
+
+        return notificationId;
+    } catch (error) {
+        console.error('保存通知失败:', error);
+        return null;
+    }
+}
+
+// 修改获取通知的API
+app.get('/api/notifications', async (req, res) => {
+    try {
+        // 从查询参数获取用户名
+        const username = req.query.username;
+        if (!username) {
+            return res.status(400).json({ error: '缺少用户名参数' });
+        }
+
+        // 获取用户的未读通知，移除过期时间检查
+        const [notifications] = await pool.query(`
+            SELECT 
+                n.id,
+                n.type,
+                n.title,
+                n.message,
+                CAST(n.data AS CHAR) as data,
+                n.created_at,
+                n.is_active,
+                un.is_read
+            FROM notifications n
+            JOIN user_notifications un ON n.id = un.notification_id
+            WHERE un.user_id = ?
+            AND n.is_active = TRUE 
+            ORDER BY n.created_at DESC
+        `, [username]);
+
+        const formattedNotifications = notifications.map(notification => ({
+            ...notification,
+            data: notification.data ? JSON.parse(notification.data) : null
+        }));
+
+        res.json(formattedNotifications);
+    } catch (error) {
+        console.error('获取通知失败:', error);
+        res.status(500).json({ error: '获取通知失败' });
+    }
+});
+
+// 修改标记通知为已读的API
+app.post('/api/notifications/:id/read', async (req, res) => {
+    try {
+        const username = req.body.username;
+        if (!username) {
+            return res.status(400).json({ error: '缺少用户名参数' });
+        }
+
+        await pool.query(
+            'UPDATE user_notifications SET is_read = TRUE WHERE user_id = ? AND notification_id = ?',
+            [username, req.params.id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('标记通知已读失败:', error);
+        res.status(500).json({ error: '标记通知已读失败' });
+    }
+});
+
+// 修改添加新菜品的API
 app.post('/api/admin/dishes', upload.single('image'), async (req, res) => {
     try {
-        const { name, price } = req.body;
+        const { name, price, showPopup } = req.body;
         const image_url = req.file ? `/images/${req.file.filename}` : null;
 
         const [result] = await pool.query(
-            'INSERT INTO menu_items (name, price, image_url) VALUES (?, ?, ?)',
-            [name, price, image_url]
+            'INSERT INTO menu_items (name, price, image_url, show_popup) VALUES (?, ?, ?, ?)',
+            [name, price, image_url, showPopup === 'true']
         );
+
+        const newDish = {
+            id: result.insertId,
+            name,
+            price,
+            image_url
+        };
+
+        // 如果需要弹窗提醒，保存通知并推送
+        if (showPopup === 'true') {
+            // 保存通知到数据库
+            const notificationId = await saveNotification(
+                'new_dish',
+                '新品推荐',
+                `新品上架：${name}`,
+                newDish
+            );
+
+            if (notificationId) {
+                // 向在线客户端推送通知
+                const message = JSON.stringify({
+                    type: 'new_dish',
+                    dish: newDish,
+                    message: `新品上架：${name}`,
+                    notificationId: notificationId
+                });
+
+                clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        try {
+                            client.send(message);
+                        } catch (error) {
+                            console.error('发送通知失败:', error);
+                        }
+                    }
+                });
+            }
+        }
 
         res.status(201).json({ id: result.insertId });
     } catch (error) {
+        console.error('添加菜品失败:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -330,11 +510,11 @@ app.post('/api/admin/dishes', upload.single('image'), async (req, res) => {
 // 修改更新菜品
 app.put('/api/admin/dishes/:id', upload.single('image'), async (req, res) => {
     try {
-        const { name, price } = req.body;
+        const { name, price, showPopup } = req.body;
         const image_url = req.file ? `/images/${req.file.filename}` : undefined;
 
-        let sql = 'UPDATE menu_items SET name = ?, price = ?';
-        let params = [name, price];
+        let sql = 'UPDATE menu_items SET name = ?, price = ?, show_popup = ?';
+        let params = [name, price, showPopup === 'true'];
 
         if (image_url) {
             sql += ', image_url = ?';
@@ -345,8 +525,33 @@ app.put('/api/admin/dishes/:id', upload.single('image'), async (req, res) => {
         params.push(req.params.id);
 
         await pool.query(sql, params);
+
+        // 如果需要弹窗提醒，向所有客户端推送更新通知
+        if (showPopup === 'true') {
+            const updatedDish = {
+                id: parseInt(req.params.id),
+                name,
+                price,
+                image_url: image_url || null
+            };
+
+            // 向所有客户端推送更新通知
+            const message = JSON.stringify({
+                type: 'dish_updated',
+                dish: updatedDish,
+                message: `菜品更新：${name}`
+            });
+
+            adminClients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(message);
+                }
+            });
+        }
+
         res.json({ success: true });
     } catch (error) {
+        console.error('更新菜品失败:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -422,7 +627,7 @@ app.get('/api/admin/orders', async (req, res) => {
             ORDER BY initiator
         `);
 
-        // 格式化返回的数据
+        // 格式化数据
         const formattedRows = rows.map(row => ({
             ...row,
             initiator: row.initiator || '未知',
@@ -538,7 +743,7 @@ app.get('/api/admin/stats', async (req, res) => {
                 break;
             case 'all':
             default:
-                // 获取最早的订单日期
+                // 取最早的订单日期
                 const [earliest] = await pool.query(`
                     SELECT MIN(order_date) as earliest_date 
                     FROM orders
@@ -605,7 +810,7 @@ app.get('/api/admin/stats', async (req, res) => {
         const activeDays = Math.max(1, orderStats[0].activeDays);
         const averageDailyRevenue = Number(orderStats[0].totalRevenue) / activeDays;
 
-        // 计算平均订单金额
+        // 计算平订单金额
         const orderCount = Math.max(1, Number(orderStats[0].orderCount));
         const averageOrderAmount = Number(orderStats[0].totalRevenue) / orderCount;
 
