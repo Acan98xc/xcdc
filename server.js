@@ -87,6 +87,12 @@ app.get('/api/init-menu', async (req, res) => {
     }
 });
 
+// 读取自签名证书和私钥
+//const privateKey = fs.readFileSync('server.key', 'utf8');
+//const certificate = fs.readFileSync('server.cert', 'utf8');
+
+//const credentials = { key: privateKey, cert: certificate };
+
 // 创建 HTTP 服务器
 const server = http.createServer(app);
 
@@ -838,6 +844,9 @@ app.get('/api/admin/stats', async (req, res) => {
                 totalRevenue: parseFloat((Number(dish.totalRevenue) || 0).toFixed(2))
             }))
         };
+
+        // 添加调试日志
+        // console.log('统计数据:', JSON.stringify(stats, null, 2));
 
         res.json(stats);
     } catch (error) {
