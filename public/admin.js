@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // initWebSocket();
     await getUsers();
     await initFilters();
+    await loadCategories();
 
     // 默认显示菜品管理部分
     showSection('dishes');
@@ -708,6 +709,7 @@ function showDishForm(dish = null) {
         document.getElementById('dish-id').value = dish.id;
         document.getElementById('dish-name').value = dish.name;
         document.getElementById('dish-price').value = dish.price;
+        document.getElementById('dish-category').value = dish.category_id || ''; // 设置分类
         document.getElementById('dish-show-popup').checked = dish.show_popup;
 
         if (dish.image_url) {
@@ -768,11 +770,13 @@ async function handleDishSubmit(event) {
         const dishId = document.getElementById('dish-id').value;
         const name = document.getElementById('dish-name').value;
         const price = document.getElementById('dish-price').value;
+        const categoryId = document.getElementById('dish-category').value;
         const imageFile = document.getElementById('dish-image').files[0];
         const showPopup = document.getElementById('dish-show-popup').checked;
 
         formData.append('name', name);
         formData.append('price', price);
+        formData.append('categoryId', categoryId);
         formData.append('showPopup', showPopup);
         if (imageFile) {
             formData.append('image', imageFile);
@@ -870,7 +874,7 @@ function toggleSound() {
         initAudioContext();
     }
 
-    // 更新���钮状态
+    // 更新按钮状态
     button.classList.toggle('sound-muted', !soundEnabled);
     button.querySelector('.sound-icon').textContent = soundEnabled ? '🔔' : '🔕';
 
@@ -1115,3 +1119,20 @@ function initTouchSupport() {
 //     document.querySelector('.custom-date-range').style.display = 'none';
 //     loadOrders();
 // }
+
+// 添加加载分类的函数
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories');
+        const categories = await response.json();
+        
+        const categorySelect = document.getElementById('dish-category');
+        categorySelect.innerHTML = '<option value="">请选择分类</option>' + 
+            categories.map(category => 
+                `<option value="${category.id}">${category.name}</option>`
+            ).join('');
+    } catch (error) {
+        console.error('加载分类失败:', error);
+        showNotification('加载分类失败', 'error');
+    }
+}

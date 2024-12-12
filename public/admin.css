@@ -854,3 +854,70 @@ header {
     align-items: center;
     gap: 10px;
 }
+
+/* 美化分类选择框 */
+#dish-category {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px;
+}
+
+#dish-category:hover {
+    border-color: #999;
+}
+
+#dish-category:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+#dish-category option {
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* 美化分类选择框的标签 */
+.form-group label[for="dish-category"] {
+    display: block;
+    margin-bottom: 6px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* 当选择框处于禁用状态时的样式 */
+#dish-category:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 错误状态的样式 */
+#dish-category:invalid {
+    border-color: #dc3545;
+}
+
+/* 添加一个小的动画效果 */
+@keyframes selectFocus {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+#dish-category:focus {
+    animation: selectFocus 0.3s ease;
+}

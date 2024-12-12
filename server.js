@@ -517,19 +517,20 @@ app.post('/api/notifications/:id/read', async (req, res) => {
 // 修改添加新菜品的API
 app.post('/api/admin/dishes', upload.single('image'), async (req, res) => {
     try {
-        const { name, price, showPopup } = req.body;
+        const { name, price, categoryId, showPopup } = req.body;
         const image_url = req.file ? `/images/${req.file.filename}` : null;
 
         const [result] = await pool.query(
-            'INSERT INTO menu_items (name, price, image_url, show_popup) VALUES (?, ?, ?, ?)',
-            [name, price, image_url, showPopup === 'true']
+            'INSERT INTO menu_items (name, price, image_url, category_id, show_popup) VALUES (?, ?, ?, ?, ?)',
+            [name, price, image_url, categoryId || null, showPopup === 'true']
         );
 
         const newDish = {
             id: result.insertId,
             name,
             price,
-            image_url
+            image_url,
+            category_id: categoryId
         };
 
         // 如果需要弹窗提醒，保存通知并推送
@@ -570,14 +571,14 @@ app.post('/api/admin/dishes', upload.single('image'), async (req, res) => {
     }
 });
 
-// 修改更新菜品
+// 修改更新菜品的API
 app.put('/api/admin/dishes/:id', upload.single('image'), async (req, res) => {
     try {
-        const { name, price, showPopup } = req.body;
+        const { name, price, categoryId, showPopup } = req.body;
         const image_url = req.file ? `/images/${req.file.filename}` : undefined;
 
-        let sql = 'UPDATE menu_items SET name = ?, price = ?, show_popup = ?';
-        let params = [name, price, showPopup === 'true'];
+        let sql = 'UPDATE menu_items SET name = ?, price = ?, category_id = ?, show_popup = ?';
+        let params = [name, price, categoryId || null, showPopup === 'true'];
 
         if (image_url) {
             sql += ', image_url = ?';
@@ -588,29 +589,6 @@ app.put('/api/admin/dishes/:id', upload.single('image'), async (req, res) => {
         params.push(req.params.id);
 
         await pool.query(sql, params);
-
-        // 如果需要弹窗提醒，向所有客户端推送更新通知
-        if (showPopup === 'true') {
-            const updatedDish = {
-                id: parseInt(req.params.id),
-                name,
-                price,
-                image_url: image_url || null
-            };
-
-            // 向所有客户端推送更新通知
-            const message = JSON.stringify({
-                type: 'dish_updated',
-                dish: updatedDish,
-                message: `菜品更新：${name}`
-            });
-
-            adminClients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(message);
-                }
-            });
-        }
 
         res.json({ success: true });
     } catch (error) {
@@ -986,7 +964,7 @@ app.get('/api/menu/search', async (req, res) => {
             WHERE name LIKE ? OR description LIKE ?
         `;
 
-        // ���行搜索查询
+        // 行搜索查询
         const [items] = await pool.query(
             searchQuery + ` LIMIT ${limit} OFFSET ${offset}`, 
             [searchPattern, searchPattern]
