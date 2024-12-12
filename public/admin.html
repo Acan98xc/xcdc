@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>后台管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>后台管理</h1>
+        <div class="header-actions">
+            <button id="toggle-sound" class="btn btn-icon" title="声音开关">
+                <span class="sound-icon">🔔</span>
+            </button>
+        </div>
+
+        <nav>
+            <ul>
+                <li><a href="#" class="nav-link active" data-section="dishes">菜品管理</a></li>
+                <li><a href="#" class="nav-link" data-section="orders">订单管理</a></li>
+                <li><a href="#" class="nav-link" data-section="stats">统计分析</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="admin-container">
+        <!-- 菜品管理部分 -->
+        <section id="dishes-section" class="admin-section">
+            <div class="section-header">
+                <h2>菜品管理</h2>
+                <button class="btn btn-primary" onclick="showDishForm()">新增菜品</button>
+            </div>
+
+            <div class="dish-grid" id="dishes-list"></div>
+        </section>
+
+        <!-- 订单管理部分 -->
+        <section id="orders-section" class="admin-section" style="display: none;">
+            <div class="section-header">
+                <h2>订单管理</h2>
+                <div class="order-filters">
+                    <div class="filter-group">
+                        <label for="order-status-filter">订单状态</label>
+                        <select id="order-status-filter">
+                            <option value="all">全部订单</option>
+                            <option value="pending">待处理</option>
+                            <option value="processing">处理中</option>
+                            <option value="completed">已完成</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="order-initiator-filter">发起人</label>
+                        <select id="order-initiator-filter">
+                            <option value="all">全部用户</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="date-range">日期范围</label>
+                        <select id="date-range">
+                            <option value="all" selected>全部时间</option>
+                            <option value="today">今天</option>
+                            <option value="week">最近7天</option>
+                            <option value="month">最近30天</option>
+                            <option value="custom">自定义时间</option>
+                        </select>
+                    </div>
+                    <div class="filter-group custom-date-range" style="display: none;">
+                        <label for="start-date">开始日期</label>
+                        <input type="date" id="start-date">
+                        <label for="end-date">结束日期</label>
+                        <input type="date" id="end-date">
+                    </div>
+                    <button class="btn btn-primary" onclick="applyFilters()">查找</button>
+                    <button class="btn" onclick="resetFilters()">重置</button>
+                </div>
+            </div>
+            <div class="order-list" id="orders-list"></div>
+        </section>
+
+        <!-- 统计分析部分 -->
+        <section id="stats-section" class="admin-section" style="display: none;">
+            <div class="section-header">
+                <h2>统计分析</h2>
+                <div class="stats-filters">
+                    <div class="filter-group">
+                        <label for="stats-period">时间范围</label>
+                        <select id="stats-period" onchange="loadStats()">
+                            <option value="all">全部数据</option>
+                            <option value="month">近30天</option>
+                            <option value="week">近7天</option>
+                            <option value="today">今日</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="stats-user">发起人</label>
+                        <select id="stats-user" onchange="loadStats()">
+                            <option value="all">全部用户</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <h3>订单统计</h3>
+                    <div id="revenue-stats"></div>
+                </div>
+                <div class="stats-card rxph">
+                    <h3>热销排行</h3>
+                    <div class="chart-container">
+                        <canvas id="popular-dishes-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 菜品表单模态框 -->
+    <div id="dish-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>菜品信息</h3>
+            <form id="dish-form" onsubmit="handleDishSubmit(event)">
+                <input type="hidden" id="dish-id">
+                <div class="form-group">
+                    <label for="dish-name">菜品名称</label>
+                    <input type="text" id="dish-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="dish-price">价格</label>
+                    <input type="number" id="dish-price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="dish-category">分类</label>
+                    <select id="dish-category" required>
+                        <option value="">请选择分类</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dish-image">图片</label>
+                    <input type="file" id="dish-image" accept="image/*">
+                    <img id="dish-image-preview" style="display: none; max-width: 200px; margin-top: 10px;">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dish-show-popup">
+                        发布新品提醒
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" class="btn" onclick="hideDishForm()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 订单详情模态框 -->
+    <div id="order-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>订单详情</h3>
+            <div id="order-details"></div>
+            <div class="form-actions">
+                <button class="btn" onclick="hideOrderModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="notification" style="display: none;">
+        <p>收到新订单！</p>
+        <button onclick="dismissNotification()">知道了</button>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+
+</html>
