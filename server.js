@@ -43,22 +43,79 @@ app.get('/', (req, res) => {
 app.get('/api/menu', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 8;
+        const category = req.query.category || null;
         const offset = (page - 1) * limit;
 
-        const [rows] = await pool.query('SELECT id, name, CAST(price AS DECIMAL(10,2)) AS price, image_url FROM menu_items ORDER BY id LIMIT ? OFFSET ?', [limit, offset]);
-        const [countResult] = await pool.query('SELECT COUNT(*) as total FROM menu_items');
-        const totalItems = countResult[0].total;
+        // 获取最新的6个菜品的ID
+        const [newItems] = await pool.query(`
+            SELECT id FROM menu_items 
+            ORDER BY created_at DESC 
+            LIMIT 6
+        `);
+        const newItemIds = newItems.map(item => item.id);
+
+        let query = `
+            SELECT m.id, m.name, CAST(m.price AS DECIMAL(10,2)) AS price, 
+                   m.image_url, m.category_id, c.name as category_name,
+                   m.created_at,
+                   CASE WHEN m.id IN (${newItemIds.join(',')}) THEN 1 ELSE 0 END as is_new
+            FROM menu_items m
+            LEFT JOIN categories c ON m.category_id = c.id
+        `;
+        
+        let queryParams = [];
+        
+        // 新品尝鲜分类特殊处理
+        if (category === '2') {
+            query = `
+                SELECT m.id, m.name, CAST(m.price AS DECIMAL(10,2)) AS price, 
+                       m.image_url, m.category_id, c.name as category_name,
+                       m.created_at, 1 as is_new
+                FROM menu_items m
+                LEFT JOIN categories c ON m.category_id = c.id
+                WHERE m.id IN (${newItemIds.join(',')})
+                ORDER BY m.created_at DESC
+            `;
+        } else if (category && category !== '1') {
+            query += ' WHERE m.category_id = ? ORDER BY m.id LIMIT ? OFFSET ?';
+            queryParams = [category, limit, offset];
+        } else {
+            query += ' ORDER BY m.id LIMIT ? OFFSET ?';
+            queryParams = [limit, offset];
+        }
+
+        const [rows] = await pool.query(query, queryParams);
+        
+        // 获取总数的查询（新品分类不需要分页）
+        let totalItems = 0;
+        if (category !== '2') {
+            let countQuery = 'SELECT COUNT(*) as total FROM menu_items';
+            if (category && category !== '1') {
+                countQuery += ' WHERE category_id = ?';
+            }
+            const [countResult] = await pool.query(
+                countQuery, 
+                category && category !== '1' ? [category] : []
+            );
+            totalItems = countResult[0].total;
+        } else {
+            totalItems = rows.length;
+        }
 
         res.json({
             items: rows,
-            currentPage: page,
-            totalPages: Math.ceil(totalItems / limit),
+            currentPage: category === '2' ? 1 : page,
+            totalPages: category === '2' ? 1 : Math.ceil(totalItems / limit),
             totalItems: totalItems
         });
     } catch (error) {
         console.error('获取菜单失败:', error);
-        res.status(500).json({ error: '获取菜单失败' });
+        console.error('错误详情:', error.stack);
+        res.status(500).json({ 
+            error: '获取菜单失败',
+            details: error.message 
+        });
     }
 });
 
@@ -407,7 +464,7 @@ app.get('/api/notifications', async (req, res) => {
             return res.status(400).json({ error: '缺少用户名参数' });
         }
 
-        // 获取用户的未读通知，移除过期时间检查
+        // 获取用户的未读通知，除过时间检查
         const [notifications] = await pool.query(`
             SELECT 
                 n.id,
@@ -929,7 +986,7 @@ app.get('/api/menu/search', async (req, res) => {
             WHERE name LIKE ? OR description LIKE ?
         `;
 
-        // 执行搜索查询
+        // ���行搜索查询
         const [items] = await pool.query(
             searchQuery + ` LIMIT ${limit} OFFSET ${offset}`, 
             [searchPattern, searchPattern]
@@ -957,6 +1014,17 @@ app.get('/api/menu/search', async (req, res) => {
     } catch (error) {
         console.error('搜索菜品失败:', error);
         res.status(500).json({ error: '搜索失败' });
+    }
+});
+
+// 获取所有分类
+app.get('/api/categories', async (req, res) => {
+    try {
+        const [categories] = await pool.query('SELECT * FROM categories ORDER BY sort_order');
+        res.json(categories);
+    } catch (error) {
+        console.error('获取分类失败:', error);
+        res.status(500).json({ error: '获取分类失败' });
     }
 });
 

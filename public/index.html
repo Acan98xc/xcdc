@@ -28,13 +28,19 @@
     </header>
     <div class="content-wrapper">
         <main>
+            <aside class="category-sidebar">
+                <ul id="category-list">
+                    <!-- 分类列表将通过 JavaScript 动态添加 -->
+                </ul>
+            </aside>
             <section id="menu">
-                <div class="search-container">
-                    <input type="text" id="search-input" placeholder="搜索菜品...">
-                    <button id="search-button">搜索</button>
+                <div class="menu-header">
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="搜索菜品...">
+                        <button id="search-button">搜索</button>
+                    </div>
                 </div>
-                <h2>菜单</h2>
-                <div id="menu-items"></div>
+                <div id="menu-items" class="menu-grid"></div>
             </section>
             <div id="pagination"></div>
         </main>

@@ -1,6 +1,7 @@
 :root {
     --primary-color: #a9b0f2;
     --secondary-color: #f5cbcb;
+    --third-color: #6aca5d;
     --background-color: #f5f7fa;
     --text-color: #333;
     --card-background: #ffffff;
@@ -131,7 +132,7 @@ nav ul li .user-info {
 
 #search-button {
     padding: 10px 20px;
-    background-color: var(--primary-color);
+    background-color: var(--third-color);
     color: white;
     border: none;
     border-radius: 8px;
@@ -169,8 +170,8 @@ section:hover {
     color: var(--primary-color);
     border-bottom: 2px solid var(--secondary-color);
     padding-bottom: 0.5rem;
-    margin-top: 5px;
-    margin-bottom: 20px;
+    margin-top: 0;
+    margin-bottom: 15px;
     font-size: 28px;
     text-align: left;
     font-weight: bold;
@@ -222,13 +223,13 @@ button:active {
     display: flex;
     flex-direction: column;
     align-items: center;
+    height: 300px;
+    justify-content: space-between;
 }
 
 .menu-item-image {
     width: 100%;
-    height: 80%;
-    max-width: 200px;
-    max-height: 200px;
+    height: 200px;
     object-fit: cover;
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
@@ -480,9 +481,6 @@ button:active {
     display: none;
 }
 
-.content-wrapper {
-    padding-top: 0px;
-}
 
 .submit-order-btn {
     background-color: #ed0000;
@@ -519,154 +517,7 @@ button:active {
     height: 20px
 }
 
-@media screen and (max-width: 768px) {
-    header {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        height: 60px;
-    }
 
-    header h1 {
-        font-size: 1.5rem;
-    }
-
-    #menu-toggle {
-        display: block;
-        background: none;
-        border: none;
-        color: white;
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-
-    #main-nav {
-        position: fixed;
-        top: 60px;
-        left: 0;
-        right: 0;
-        background-color: rgba(169, 176, 242, 0.95);
-        display: none;
-        padding: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        max-height: calc(100vh - 60px);
-        overflow-y: auto;
-    }
-
-    #main-nav.show {
-        display: block;
-    }
-
-    nav ul {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    nav ul li {
-        margin: 0.8rem 0;
-        width: 100%;
-        text-align: center;
-    }
-
-    nav ul li a {
-        display: block;
-        padding: 0.8rem;
-        font-size: 1.1rem;
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-    }
-
-    main {
-        /*padding: 1rem;*/
-        padding-left: 0;
-    }
-
-    .menu-item {
-        padding: 1rem;
-    }
-
-    .menu-item-image {
-        width: 150px;
-        height: 150px;
-    }
-
-    .add-to-cart-btn {
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
-    }
-
-    .mobile-only {
-        display: block;
-    }
-
-
-    #menu-items {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
-    }
-
-    .menu-item h3 {
-        font-size: 1rem;
-        margin: 0.5rem 0;
-    }
-
-    .menu-item p {
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-}
-
-@media screen and (max-width: 480px) {
-    header h1 {
-        font-size: 1.2rem;
-    }
-
-    h2 {
-        font-size: 1.5rem;
-    }
-
-    #menu-items {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    }
-
-    .menu-item-image {
-        width: 100px;
-        height: 100px;
-    }
-
-    .menu-item h3 {
-        font-size: 0.9rem;
-    }
-
-    .menu-item p {
-        font-size: 0.8rem;
-    }
-
-    .add-to-cart-btn {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.7rem;
-    }
-
-    #wheel-container {
-        width: 320px;
-        height: 320px;
-    }
-
-    #wheel {
-        width: 300px;
-        height: 300px;
-    }
-
-    #wheel-section {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 80vh;
-        top: 0;
-    }
-}
 
 #wheel-section {
     display: flex;
@@ -812,17 +663,7 @@ button:active {
     }
 }
 
-/* 响应式设计 */
-@media screen and (max-width: 480px) {
-    .login-container {
-        margin: 50px 20px;
-        padding: 30px 20px;
-    }
 
-    .login-container h1 {
-        font-size: 1.8em;
-    }
-}
 
 /* 添加背景样式 */
 body.login-page {
@@ -850,13 +691,6 @@ body.login-page {
     background-color: rgba(33, 150, 243, 0.1);
 }
 
-@media screen and (max-width: 768px) {
-    .user-info {
-        justify-content: center;
-        padding: 8px 0;
-        border-bottom: 1px solid #eee;
-    }
-}
 
 /* 登录错误弹窗样式 */
 .login-modal {
@@ -1004,3 +838,547 @@ body.login-page {
     max-height: 300px;
     object-fit: contain;
 }
+
+/* 添加分类侧边栏样式 */
+.content-wrapper {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+
+.category-sidebar {
+    width: 100%;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+#category-list {
+    list-style: none;
+    padding: 10px;
+    margin: 0;
+    display: flex;
+    flex-wrap: nowrap;  /* 防止换行 */
+    gap: 10px;
+    justify-content: flex-start;
+    align-items: center;
+    overflow-x: auto;  /* 超出时允许横向滚动 */
+    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 隐藏滚动条 */
+#category-list::-webkit-scrollbar {
+    display: none;
+}
+
+.category-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    background: #fff;
+    min-width: auto;
+    flex-shrink: 0;  /* 防止项目被压缩 */
+    white-space: nowrap;  /* 文字不换行 */
+}
+
+.category-item:hover {
+    background-color: #f5f5f5;
+    transform: translateY(-2px);
+}
+
+.category-item.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.category-icon {
+    font-size: 18px;
+}
+
+.category-name {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* 修改菜单区域样式 */
+#menu {
+    flex: 1;
+    min-width: 0;
+}
+
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 20px;
+}
+
+
+
+
+/* 添加新品标识样式 */
+.menu-item-image-container {
+    position: relative;
+    width: 100%;
+}
+
+.new-tag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #ff4d4f;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 修改菜品图片容器样式 */
+.menu-item-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+}
+/* 修改菜单头部样式 */
+.menu-header {
+    margin-bottom: 10px;  /* 减小底部间距 */
+}
+
+
+/* 超小屏幕优化 */
+@media screen and (max-width: 375px) {
+    .content-wrapper {
+        padding: 8px;
+        padding-top: 50px;
+    }
+
+    .category-sidebar {
+        padding: 6px 0;
+    }
+
+    #category-list {
+        padding: 0 8px;
+        gap: 6px;
+    }
+
+    .category-item {
+        padding: 4px 10px;
+        font-size: 12px;
+    }
+
+    .category-icon {
+        font-size: 14px;
+    }
+
+    .menu-grid {
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .menu-item {
+        padding: 6px;
+    }
+
+    .menu-item h3 {
+        font-size: 12px;
+        margin: 4px 0;
+    }
+
+    .add-to-cart-btn {
+        padding: 4px 0;
+        font-size: 11px;
+    }
+
+
+
+    #search-input {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    #search-button {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .menu-header {
+        margin-bottom: 6px;
+    }
+
+    #menu h2 {
+        font-size: 20px;
+        margin-bottom: 8px;
+        padding-bottom: 0.2rem;
+    }
+
+    .search-container {
+        margin: 8px 8px;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .content-wrapper {
+        flex-direction: column;
+    }
+
+    .category-sidebar {
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        margin-bottom: 0;
+        padding: 8px 0;
+    }
+
+    #category-list {
+        padding: 0 10px;
+        gap: 8px;
+    }
+
+    .category-item {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+
+    .category-icon {
+        font-size: 16px;
+        margin-right: 4px;
+    }
+}
+
+/* 添加超小屏幕的优化 */
+@media screen and (max-width: 320px) {
+    .menu-item {
+        height: 180px;
+        padding: 0.6rem;
+    }
+
+    .menu-item-image {
+        height: 80px;
+    }
+
+    .menu-item h3 {
+        font-size: 0.8rem;
+        margin: 0.2rem 0;
+    }
+
+    .add-to-cart-btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.7rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    header h1 {
+        font-size: 1.2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    #menu-items {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
+    }
+
+    .menu-item {
+        height: 200px;
+        padding: 0.8rem;
+    }
+
+    .menu-item-image {
+        height: 100px;
+    }
+
+    .menu-item h3 {
+        font-size: 0.9rem;
+        margin: 0.3rem 0;
+    }
+
+    .menu-item p {
+        font-size: 0.8rem;
+    }
+
+    .add-to-cart-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    #wheel-container {
+        width: 320px;
+        height: 320px;
+    }
+
+    #wheel {
+        width: 300px;
+        height: 300px;
+    }
+
+    #wheel-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 80vh;
+        top: 0;
+    }
+    .login-container {
+        margin: 50px 20px;
+        padding: 30px 20px;
+    }
+
+    .login-container h1 {
+        font-size: 1.8em;
+    }
+}
+
+/* 修改移动端布局样式 */
+@media screen and (max-width: 768px) {
+    .menu-header {
+        margin-bottom: 0px;  /* 移动端更紧凑 */
+        padding-top: 0px;
+    }
+
+    #menu h2 {
+        font-size: 24px;  /* 移动端字体稍小 */
+        margin-bottom: 10px;
+        padding-bottom: 0.3rem;
+    }
+
+    header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        height: 55px;
+    }
+
+    header h1 {
+        font-size: 2rem;
+    }
+
+    #menu-toggle {
+        display: block;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+
+    #main-nav {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background-color: rgba(169, 176, 242, 0.95);
+        display: none;
+        padding: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
+    }
+
+    #main-nav.show {
+        display: block;
+    }
+
+    nav ul {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    nav ul li {
+        margin: 0.8rem 0;
+        width: 100%;
+        text-align: center;
+    }
+
+    nav ul li a {
+        display: block;
+        padding: 0.8rem;
+        font-size: 1.1rem;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+    }
+
+    main {
+        /*padding: 1rem;*/
+        padding-left: 0;
+    }
+
+
+    .mobile-only {
+        display: block;
+    }
+
+
+    #menu-items {
+        grid-template-columns: repeat(2, 1fr);
+        /* gap: 1rem; */
+        padding-left: 0%;
+    }
+
+    .menu-item h3 {
+        font-size: 1rem;
+        margin: 0.5rem 0;
+    }
+
+    .menu-item p {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .user-info {
+        justify-content: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .content-wrapper {
+        padding: 10px;
+        gap: 10px;
+        /*padding-top: 60px;*/
+    }
+
+    .category-sidebar {
+        width: 100%;
+        margin-top: 5px;
+        margin-bottom: 0;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: var(--background-color);
+        padding: 8px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    #category-list {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 10px;
+        gap: 8px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    #category-list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .category-item {
+        padding: 6px 12px;
+        border: 1px solid #e0e0e0;
+        border-radius: 16px;
+        min-width: auto;
+        flex-shrink: 0;
+        background: #fff;
+        font-size: 14px;
+    }
+
+    .category-item.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .category-icon {
+        font-size: 16px;
+        margin-right: 4px;
+    }
+
+    .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .menu-item {
+        height: auto;
+        padding: 8px;
+        border-radius: 12px;
+        /*padding: 1rem;*/
+    }
+
+    .menu-item-image-container {
+        width: 100%;
+        padding-top: 100%; /* 1:1 宽高比 */
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    .menu-item-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 0;
+    }
+
+    .new-tag {
+        top: 4px;
+        right: 4px;
+        padding: 2px 6px;
+        font-size: 10px;
+        border-radius: 8px;
+    }
+
+    .menu-item h3 {
+        font-size: 14px;
+        margin: 6px 0;
+        /* 文字超出显示省略号 */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .add-to-cart-btn {
+        width: 100%;
+        padding: 6px 0;
+        font-size: 12px;
+        border-radius: 16px;
+    }
+
+    /* 搜索框样式优化 */
+    .search-container {
+        margin: 15px 10px;
+        gap: 8px;
+    }
+
+    #search-input {
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 16px;
+    }
+
+    #search-button {
+        padding: 8px 16px;
+        font-size: 14px;
+        border-radius: 16px;
+        white-space: nowrap;
+    }
+}
+

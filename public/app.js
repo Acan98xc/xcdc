@@ -9,6 +9,7 @@ let wheelItems = [];
 let spinning = false;
 let ws;
 let searchTimeout;
+let currentCategory = null;
 
 // 初始化WebSocket连接
 function initWebSocket() {
@@ -171,14 +172,12 @@ function handleLogout() {
 // 获取菜单
 async function getMenu(page = 1) {
     try {
-        const response = await fetch(`/api/menu?page=${page}&limit=${itemsPerPage}`);
-        // console.log(response);
-
+        const categoryParam = currentCategory ? `&category=${currentCategory}` : '';
+        const response = await fetch(`/api/menu?page=${page}&limit=${itemsPerPage}${categoryParam}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        // console.log('Retrieved menu:', data);
         displayMenu(data.items);
         displayPagination(data.currentPage, data.totalPages);
     } catch (error) {
@@ -191,6 +190,7 @@ function displayMenu(menu) {
     const menuItems = document.getElementById('menu-items');
     if (!menuItems) return;
     menuItems.innerHTML = '';
+    
     menu.forEach(item => {
         const itemElement = document.createElement('div');
         itemElement.className = 'menu-item';
@@ -198,8 +198,15 @@ function displayMenu(menu) {
         const buttonClass = addedItems[item.id] ? 'add-to-cart-btn added-to-cart selected' : 'add-to-cart-btn';
         const price = parseFloat(item.price);
         const formattedPrice = !isNaN(price) ? price.toFixed(2) : 'N/A';
+        
+        // 使用服务器返回的is_new标志
+        const isNew = item.is_new === 1;
+        
         itemElement.innerHTML = `
-            <img src="${item.image_url}" alt="${item.name}" class="menu-item-image">
+            <div class="menu-item-image-container">
+                <img src="${item.image_url}" alt="${item.name}" class="menu-item-image">
+                ${isNew ? '<span class="new-tag">新品</span>' : ''}
+            </div>
             <h3>${item.name}</h3>
             <button onclick="addToCart(${item.id}, '${item.name}', ${price}, this)" class="${buttonClass}">${buttonText}</button>
         `;
@@ -897,6 +904,63 @@ async function performSearch(query) {
         showModal('搜索失败，请稍后重试', 'error');
     }
 }
+
+// 获取并显示分类列表
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const categories = await response.json();
+        displayCategories(categories);
+    } catch (error) {
+        console.error('获取分类失败:', error);
+    }
+}
+
+// 显示分类列表
+function displayCategories(categories) {
+    const categoryList = document.getElementById('category-list');
+    if (!categoryList) return;
+
+    categoryList.innerHTML = '';
+    categories.forEach(category => {
+        const li = document.createElement('li');
+        li.className = 'category-item';
+        
+        // 如果是当前选中的分类，添加active类
+        if ((currentCategory === null && category.id === 1) || 
+            currentCategory === category.id) {
+            li.classList.add('active');
+        }
+        
+        li.innerHTML = `
+            <span class="category-icon">${category.icon}</span>
+            <span class="category-name">${category.name}</span>
+        `;
+        
+        li.addEventListener('click', () => {
+            // 移除其他分类的active类
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // 添加当前分类的active类
+            li.classList.add('active');
+            // 更新当前分类并重新加载菜单
+            currentCategory = category.id === 1 ? null : category.id;
+            getMenu(1);
+            
+            // 如果是新品分类隐藏分页
+            const paginationElement = document.getElementById('pagination');
+            if (paginationElement) {
+                paginationElement.style.display = category.id === 2 ? 'none' : 'flex';
+            }
+        });
+        categoryList.appendChild(li);
+    });
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', async () => {
     // 检查登录状态
@@ -937,6 +1001,10 @@ function init() {
 
     initMobileMenu();
     initSearchFeature();
+
+    // 初始化时设置currentCategory为null（表示全部）
+    currentCategory = null;
+    loadCategories();
 
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     if (currentPath === 'index.html' || currentPath === '') {
